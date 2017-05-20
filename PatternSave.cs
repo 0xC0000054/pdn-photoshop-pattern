@@ -48,11 +48,19 @@ namespace PatternFileTypePlugin
             Surface surface = layer.Surface;
             Rectangle visibleBounds = GetVisibleBounds(surface);
 
-            Analyze(surface, visibleBounds, out bool hasAlpha);
+            Analyze(surface, visibleBounds, out bool hasAlpha, out bool grayScale);
 
             // Write the pattern header
             writer.Write(PatternConstants.RecordVersion);
-            writer.Write((uint)ImageType.RGB);
+
+            if (grayScale)
+            {
+                writer.Write((uint)ImageType.Grayscale);
+            }
+            else
+            {
+                writer.Write((uint)ImageType.RGB);
+            }
 
             writer.Write((ushort)visibleBounds.Height);
             writer.Write((ushort)visibleBounds.Width);
@@ -70,7 +78,14 @@ namespace PatternFileTypePlugin
                 // Write the unknown field, always 24.
                 writer.Write((uint)24);
 
-                WriteRGBPattern(writer, surface, visibleBounds, hasAlpha, rle);
+                if (grayScale)
+                {
+                    WriteGrayscalePattern(writer, surface, visibleBounds, hasAlpha, rle);
+                }
+                else
+                {
+                    WriteRGBPattern(writer, surface, visibleBounds, hasAlpha, rle);
+                }
             }
         }
 
@@ -120,9 +135,10 @@ namespace PatternFileTypePlugin
             }
         }
 
-        private static unsafe void Analyze(Surface surface, Rectangle bounds, out bool hasAlpha)
+        private static unsafe void Analyze(Surface surface, Rectangle bounds, out bool hasAlpha, out bool grayScale)
         {
             hasAlpha = false;
+            grayScale = true;
 
             for (int y = bounds.Top; y < bounds.Bottom; y++)
             {
@@ -132,6 +148,10 @@ namespace PatternFileTypePlugin
                     if (p->A < 255)
                     {
                         hasAlpha = true;
+                    }
+                    if (!(p->R == p->G && p->G == p->B))
+                    {
+                        grayScale = false;
                     }
 
                     p++;
@@ -179,6 +199,45 @@ namespace PatternFileTypePlugin
             {
                 // Write the padding that comes before the channel header.
                 writer.Write(new byte[PatternConstants.AlphaChannelPadding.RGBModeSize]);
+
+                WriteChannelData(writer, visibleBounds, compression, alpha);
+            }
+        }
+
+        private static unsafe void WriteGrayscalePattern(BinaryReverseWriter writer, Surface surface, Rectangle visibleBounds, bool hasAlpha, bool rle)
+        {
+            int size = visibleBounds.Width * visibleBounds.Height;
+
+            byte[] gray = new byte[size];
+            byte[] alpha = hasAlpha ? new byte[size] : null;
+
+            int index = 0;
+            for (int y = visibleBounds.Top; y < visibleBounds.Bottom; y++)
+            {
+                ColorBgra* p = surface.GetPointAddressUnchecked(visibleBounds.Left, y);
+
+                for (int x = visibleBounds.Left; x < visibleBounds.Right; x++)
+                {
+                    gray[index] = p->R;
+
+                    if (hasAlpha)
+                    {
+                        alpha[index] = p->A;
+                    }
+
+                    p++;
+                    index++;
+                }
+            }
+
+            PatternImageCompression compression = rle ? PatternImageCompression.RLE : PatternImageCompression.Raw;
+
+            WriteChannelData(writer, visibleBounds, compression, gray);
+
+            if (hasAlpha)
+            {
+                // Write the padding that comes before the channel header.
+                writer.Write(new byte[PatternConstants.AlphaChannelPadding.GrayscaleModeSize]);
 
                 WriteChannelData(writer, visibleBounds, compression, alpha);
             }
