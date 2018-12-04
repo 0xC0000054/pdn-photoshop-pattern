@@ -1,6 +1,6 @@
 ﻿/////////////////////////////////////////////////////////////////////////////////
 //
-// ABR FileType for Paint.NET
+// Photoshop Pattern FileType for Paint.NET
 //
 // This software is provided under the MIT License:
 //   Copyright (c) 2012-2018 Nicholas Hayes
