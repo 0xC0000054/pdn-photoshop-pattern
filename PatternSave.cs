@@ -22,7 +22,7 @@ namespace PatternFileTypePlugin
         {
             bool rle = token.GetProperty<PaintDotNet.PropertySystem.BooleanProperty>(PropertyNames.RLE).Value;
 
-            using (BinaryReverseWriter writer = new BinaryReverseWriter(output, true))
+            using (BigEndianBinaryWriter writer = new BigEndianBinaryWriter(output, true))
             {
                 writer.Write(PatternConstants.FileSignature);
                 writer.Write(PatternConstants.FileVersion);
@@ -43,7 +43,7 @@ namespace PatternFileTypePlugin
             }
         }
 
-        private static void SaveLayer(BinaryReverseWriter writer, BitmapLayer layer, bool rle)
+        private static void SaveLayer(BigEndianBinaryWriter writer, BitmapLayer layer, bool rle)
         {
             Surface surface = layer.Surface;
             Rectangle visibleBounds = GetVisibleBounds(surface);
@@ -159,7 +159,7 @@ namespace PatternFileTypePlugin
             }
         }
 
-        private static unsafe void WriteRGBPattern(BinaryReverseWriter writer, Surface surface, Rectangle visibleBounds, bool hasAlpha, bool rle)
+        private static unsafe void WriteRGBPattern(BigEndianBinaryWriter writer, Surface surface, Rectangle visibleBounds, bool hasAlpha, bool rle)
         {
             int size = visibleBounds.Width * visibleBounds.Height;
 
@@ -204,7 +204,7 @@ namespace PatternFileTypePlugin
             }
         }
 
-        private static unsafe void WriteGrayscalePattern(BinaryReverseWriter writer, Surface surface, Rectangle visibleBounds, bool hasAlpha, bool rle)
+        private static unsafe void WriteGrayscalePattern(BigEndianBinaryWriter writer, Surface surface, Rectangle visibleBounds, bool hasAlpha, bool rle)
         {
             int size = visibleBounds.Width * visibleBounds.Height;
 
@@ -243,7 +243,7 @@ namespace PatternFileTypePlugin
             }
         }
 
-        private static unsafe void WriteChannelData(BinaryReverseWriter writer, Rectangle visibleBounds, PatternImageCompression compression, byte[] channelData)
+        private static unsafe void WriteChannelData(BigEndianBinaryWriter writer, Rectangle visibleBounds, PatternImageCompression compression, byte[] channelData)
         {
             const ushort ChannelDepth = 8;
 

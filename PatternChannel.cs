@@ -24,7 +24,7 @@ namespace PatternFileTypePlugin
         private readonly PatternImageCompression compression;
         private byte[] channelData;
        
-        public PatternChannel(BinaryReverseReader reader)
+        public PatternChannel(BigEndianBinaryReader reader)
         {
             this.enabled = reader.ReadUInt32() != 0;
             this.size = reader.ReadUInt32();
@@ -128,7 +128,7 @@ namespace PatternFileTypePlugin
             return this.channelData;
         }
 
-        public void WriteChannelData(BinaryReverseWriter writer)
+        public void WriteChannelData(BigEndianBinaryWriter writer)
         {
             writer.Write(this.enabled ? 1U : 0U);
 

@@ -23,7 +23,7 @@ namespace PatternFileTypePlugin
     {
         public static Document Load(Stream stream)
         {
-            using (BinaryReverseReader reader = new BinaryReverseReader(stream))
+            using (BigEndianBinaryReader reader = new BigEndianBinaryReader(stream))
             {
                 uint sig = reader.ReadUInt32();
                 if (sig != PatternConstants.FileSignature)
@@ -118,7 +118,7 @@ namespace PatternFileTypePlugin
             }
         }
 
-        private static unsafe List<PatternData> LoadPatterns(BinaryReverseReader reader, uint count)
+        private static unsafe List<PatternData> LoadPatterns(BigEndianBinaryReader reader, uint count)
         {
             List<PatternData> patterns = new List<PatternData>((int)count);
 
@@ -230,7 +230,7 @@ namespace PatternFileTypePlugin
             return patterns;
         }
 
-        private static PatternChannel GetAlphaChannel(BinaryReverseReader reader, ImageType imageType, long nextPatternOffset)
+        private static PatternChannel GetAlphaChannel(BigEndianBinaryReader reader, ImageType imageType, long nextPatternOffset)
         {
             long paddingSize = -1;
             switch (imageType)

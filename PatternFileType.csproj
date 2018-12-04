@@ -53,8 +53,8 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BinaryReverseReader.cs" />
-    <Compile Include="BinaryReverseWriter.cs" />
+    <Compile Include="BigEndianBinaryReader.cs" />
+    <Compile Include="BigEndianBinaryWriter.cs" />
     <Compile Include="GlobalSuppressions.cs" />
     <Compile Include="ImageType.cs" />
     <Compile Include="LengthWriter.cs" />
