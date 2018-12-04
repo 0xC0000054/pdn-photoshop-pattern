@@ -147,7 +147,7 @@ namespace PatternFileTypePlugin
                     indexedColorTable = reader.ReadBytes(768);
 
                     // Skip the 2 unknown UInt16 values, colors used and colors important?
-                    reader.BaseStream.Position += 4L;
+                    reader.Position += 4L;
                 }
                 else if (imageMode == ImageType.RGB)
                 {
@@ -168,7 +168,7 @@ namespace PatternFileTypePlugin
 
                 if (channelCount == 0)
                 {
-                    reader.BaseStream.Position += patternSize;
+                    reader.Position += patternSize;
                 }
 
 #if DEBUG
@@ -181,13 +181,13 @@ namespace PatternFileTypePlugin
 
                 if (patternSize > 0)
                 {
-                    long nextPatternOffset = reader.BaseStream.Position + patternSize;
+                    long nextPatternOffset = reader.Position + patternSize;
 
                     Rectangle bounds = reader.ReadInt32Rectangle();
                     if (bounds.Width <= 0 || bounds.Height <= 0)
                     {
                         // Ignore any patterns with invalid dimensions.
-                        reader.BaseStream.Position += (nextPatternOffset - reader.BaseStream.Position);
+                        reader.Position += (nextPatternOffset - reader.Position);
                         continue;
                     }
 
@@ -210,11 +210,11 @@ namespace PatternFileTypePlugin
                         DecodeChannelData(alphaChannel, alpha, 0, 1);
                     }
 
-                    long remainder = nextPatternOffset - reader.BaseStream.Position;
+                    long remainder = nextPatternOffset - reader.Position;
 
                     if (remainder > 0)
                     {
-                        reader.BaseStream.Position += remainder;
+                        reader.Position += remainder;
                     }
 
                     patterns.Add(new PatternData(name, RenderPattern(bounds.Width, bounds.Height, channelCount, imageMode, pixels, indexedColorTable, alpha)));
@@ -247,14 +247,14 @@ namespace PatternFileTypePlugin
 
             if (paddingSize >= 0)
             {
-                long dataStartOffset = reader.BaseStream.Position + paddingSize + PatternConstants.ChannelHeaderSize;
+                long dataStartOffset = reader.Position + paddingSize + PatternConstants.ChannelHeaderSize;
 
                 if (dataStartOffset < nextPatternOffset)
                 {
-                    long offset = reader.BaseStream.Position;
+                    long offset = reader.Position;
 
                     // Skip the padding bytes.
-                    reader.BaseStream.Position += paddingSize;
+                    reader.Position += paddingSize;
 
                     PatternChannel channel = new PatternChannel(reader);
 
@@ -264,7 +264,7 @@ namespace PatternFileTypePlugin
                     }
                     else
                     {
-                        reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+                        reader.Position = offset;
                     }
                 }
             }
