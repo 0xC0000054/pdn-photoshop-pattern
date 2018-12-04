@@ -1,7 +1,7 @@
 ﻿/////////////////////////////////////////////////////////////////////////////////
 //
 // Photoshop Pattern FileType Plugin for Paint.NET
-// 
+//
 // This software is provided under the MIT License:
 //   Copyright (c) 2012-2017 Nicholas Hayes
 //
@@ -13,7 +13,7 @@ namespace PatternFileTypePlugin
 {
     internal enum PatternImageCompression : byte
     {
-        Raw = 0, 
+        Raw = 0,
         RLE = 1
     }
 }

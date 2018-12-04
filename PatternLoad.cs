@@ -1,7 +1,7 @@
 ﻿/////////////////////////////////////////////////////////////////////////////////
 //
 // Photoshop Pattern FileType Plugin for Paint.NET
-// 
+//
 // This software is provided under the MIT License:
 //   Copyright (c) 2012-2017 Nicholas Hayes
 //
@@ -140,13 +140,13 @@ namespace PatternFileTypePlugin
 
                 int channelCount = 0;
                 byte[] indexedColorTable = null;
-                
+
                 if (imageMode == ImageType.Indexed)
                 {
                     channelCount = 1;
-                    indexedColorTable = reader.ReadBytes(768);                    
+                    indexedColorTable = reader.ReadBytes(768);
 
-                    // Skip the 2 unknown UInt16 values, colors used and colors important? 
+                    // Skip the 2 unknown UInt16 values, colors used and colors important?
                     reader.BaseStream.Position += 4L;
                 }
                 else if (imageMode == ImageType.RGB)
@@ -223,7 +223,7 @@ namespace PatternFileTypePlugin
                     using (Bitmap bmp = patterns[i].pattern.CreateAliasedBitmap())
                     {
                     }
-#endif 
+#endif
                 }
             }
 

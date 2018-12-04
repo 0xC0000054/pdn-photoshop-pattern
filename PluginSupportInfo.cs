@@ -1,7 +1,7 @@
 ﻿/////////////////////////////////////////////////////////////////////////////////
 //
 // Photoshop Pattern FileType Plugin for Paint.NET
-// 
+//
 // This software is provided under the MIT License:
 //   Copyright (c) 2012-2017 Nicholas Hayes
 //
@@ -19,9 +19,9 @@ namespace PatternFileTypePlugin
     {
         public string Author
         {
-            get 
+            get
             {
-                return "null54"; 
+                return "null54";
             }
         }
 
@@ -29,7 +29,7 @@ namespace PatternFileTypePlugin
         {
             get
             {
-                return ((AssemblyCopyrightAttribute)typeof(PatternFileType).Assembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute), false)[0]).Copyright; 
+                return ((AssemblyCopyrightAttribute)typeof(PatternFileType).Assembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute), false)[0]).Copyright;
             }
         }
 
@@ -43,7 +43,7 @@ namespace PatternFileTypePlugin
 
         public Version Version
         {
-            get 
+            get
             {
                 return typeof(PatternFileType).Assembly.GetName().Version;
             }
@@ -51,7 +51,7 @@ namespace PatternFileTypePlugin
 
         public Uri WebsiteUri
         {
-            get 
+            get
             {
                 return new Uri("http://forums.getpaint.net/index.php?/topic/25696-photoshop-pattern-filetype/");
             }

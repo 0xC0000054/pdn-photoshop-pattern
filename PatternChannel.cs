@@ -1,7 +1,7 @@
 ﻿/////////////////////////////////////////////////////////////////////////////////
 //
 // Photoshop Pattern FileType Plugin for Paint.NET
-// 
+//
 // This software is provided under the MIT License:
 //   Copyright (c) 2017 Nicholas Hayes
 //
@@ -23,7 +23,7 @@ namespace PatternFileTypePlugin
         private readonly ushort depth16;
         private readonly PatternImageCompression compression;
         private byte[] channelData;
-       
+
         public PatternChannel(BigEndianBinaryReader reader)
         {
             this.enabled = reader.ReadUInt32() != 0;

@@ -1,7 +1,7 @@
 ﻿/////////////////////////////////////////////////////////////////////////////////
 //
 // Photoshop Pattern FileType Plugin for Paint.NET
-// 
+//
 // This software is provided under the MIT License:
 //   Copyright (c) 2012-2017 Nicholas Hayes
 //
@@ -29,7 +29,7 @@ namespace PatternFileTypePlugin
         }
 
         public PatternFileType() : base(
-            StaticName, 
+            StaticName,
             FileTypeFlags.SupportsLoading | FileTypeFlags.SupportsSaving | FileTypeFlags.SupportsLayers | FileTypeFlags.SavesWithProgress,
             new string[] {".pat"})
         {
