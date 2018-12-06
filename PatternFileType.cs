@@ -18,7 +18,7 @@ using System.IO;
 namespace PatternFileTypePlugin
 {
     [PluginSupportInfo(typeof(PluginSupportInfo))]
-    public sealed partial class PatternFileType : PropertyBasedFileType
+    public sealed class PatternFileType : PropertyBasedFileType
     {
         public static string StaticName
         {
