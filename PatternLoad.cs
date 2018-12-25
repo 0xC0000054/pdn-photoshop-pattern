@@ -388,7 +388,7 @@ namespace PatternFileTypePlugin
                                             dst->R = dst->G = dst->B = *src;
                                             break;
                                         case ImageType.Indexed:
-                                            int index = src[0];
+                                            int index = src[0] * 3;
                                             dst->R = indexedColorTable[index];
                                             dst->G = indexedColorTable[index + 1];
                                             dst->B = indexedColorTable[index + 2];
