@@ -42,28 +42,28 @@ namespace PatternFileTypePlugin
             this.writer = writer;
             // we will write the correct length later, so remember
             // the position
-            this.lengthFieldOffset = writer.BaseStream.Position;
+            lengthFieldOffset = writer.BaseStream.Position;
             writer.Write(0xFEEDFEED);
 
             // remember the start  position for calculation Image
             // resources length
-            this.startPosition = writer.BaseStream.Position;
-            this.disposed = false;
+            startPosition = writer.BaseStream.Position;
+            disposed = false;
         }
 
         public void Dispose()
         {
-            if (!this.disposed)
+            if (!disposed)
             {
-                long endPosition = this.writer.BaseStream.Position;
-                long length = endPosition - this.startPosition;
+                long endPosition = writer.BaseStream.Position;
+                long length = endPosition - startPosition;
 
-                writer.BaseStream.Position = this.lengthFieldOffset;
+                writer.BaseStream.Position = lengthFieldOffset;
                 writer.Write((uint)length);
 
                 writer.BaseStream.Position = endPosition;
 
-                this.disposed = true;
+                disposed = true;
             }
         }
     }

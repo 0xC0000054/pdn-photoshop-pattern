@@ -438,10 +438,10 @@ namespace PatternFileTypePlugin
 
             public void Dispose()
             {
-                if (this.pattern != null)
+                if (pattern != null)
                 {
-                    this.pattern.Dispose();
-                    this.pattern = null;
+                    pattern.Dispose();
+                    pattern = null;
                 }
             }
         }

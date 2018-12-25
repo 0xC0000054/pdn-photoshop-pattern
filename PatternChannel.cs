@@ -26,14 +26,14 @@ namespace PatternFileTypePlugin
 
         public PatternChannel(BigEndianBinaryReader reader)
         {
-            this.enabled = reader.ReadUInt32() != 0;
-            this.size = reader.ReadUInt32();
-            this.depth32 = reader.ReadUInt32();
-            this.bounds = reader.ReadInt32Rectangle();
-            this.depth16 = reader.ReadUInt16();
-            this.compression = (PatternImageCompression)reader.ReadByte();
+            enabled = reader.ReadUInt32() != 0;
+            size = reader.ReadUInt32();
+            depth32 = reader.ReadUInt32();
+            bounds = reader.ReadInt32Rectangle();
+            depth16 = reader.ReadUInt16();
+            compression = (PatternImageCompression)reader.ReadByte();
 
-            if (this.depth16 != 8 && this.depth16 != 16)
+            if (depth16 != 8 && depth16 != 16)
             {
                 throw new FormatException(Properties.Resources.UnsupportedChannelDepth);
             }
@@ -41,12 +41,12 @@ namespace PatternFileTypePlugin
             int height = bounds.Height;
 
             int channelDataStride = bounds.Width;
-            if (this.depth16 == 16)
+            if (depth16 == 16)
             {
                 channelDataStride *= 2;
             }
 
-            this.channelData = new byte[channelDataStride * height];
+            channelData = new byte[channelDataStride * height];
 
             if (compression == PatternImageCompression.RLE)
             {
@@ -82,20 +82,20 @@ namespace PatternFileTypePlugin
 
         public PatternChannel(ushort depth, Rectangle bounds, PatternImageCompression compression, byte[] data)
         {
-            this.enabled = true;
-            this.size = 0; // Placeholder for the size written in WriteChannelData.
-            this.depth32 = depth;
+            enabled = true;
+            size = 0; // Placeholder for the size written in WriteChannelData.
+            depth32 = depth;
             this.bounds = bounds;
-            this.depth16 = depth;
+            depth16 = depth;
             this.compression = compression;
-            this.channelData = data;
+            channelData = data;
         }
 
         public bool Enabled
         {
             get
             {
-                return this.enabled;
+                return enabled;
             }
         }
 
@@ -103,7 +103,7 @@ namespace PatternFileTypePlugin
         {
             get
             {
-                return this.size;
+                return size;
             }
         }
 
@@ -111,7 +111,7 @@ namespace PatternFileTypePlugin
         {
             get
             {
-                return this.bounds;
+                return bounds;
             }
         }
 
@@ -119,30 +119,30 @@ namespace PatternFileTypePlugin
         {
             get
             {
-                return this.depth16;
+                return depth16;
             }
         }
 
         public byte[] GetChannelData()
         {
-            return this.channelData;
+            return channelData;
         }
 
         public void WriteChannelData(BigEndianBinaryWriter writer)
         {
-            writer.Write(this.enabled ? 1U : 0U);
+            writer.Write(enabled ? 1U : 0U);
 
             using (new LengthWriter(writer))
             {
-                writer.Write(this.depth32);
-                writer.WriteInt32Rectangle(this.bounds);
-                writer.Write(this.depth16);
-                writer.Write((byte)this.compression);
+                writer.Write(depth32);
+                writer.WriteInt32Rectangle(bounds);
+                writer.Write(depth16);
+                writer.Write((byte)compression);
 
-                if (this.compression == PatternImageCompression.RLE)
+                if (compression == PatternImageCompression.RLE)
                 {
-                    int width = this.bounds.Width;
-                    int height = this.bounds.Height;
+                    int width = bounds.Width;
+                    int height = bounds.Height;
 
                     long rowCountPosition = writer.BaseStream.Position;
 
@@ -155,7 +155,7 @@ namespace PatternFileTypePlugin
 
                     for (int y = 0; y < height; y++)
                     {
-                        rowCount[y] = (short)RLEHelper.EncodedRow(writer.BaseStream, this.channelData, y * width, width);
+                        rowCount[y] = (short)RLEHelper.EncodedRow(writer.BaseStream, channelData, y * width, width);
                     }
 
                     long current = writer.BaseStream.Position;
@@ -170,7 +170,7 @@ namespace PatternFileTypePlugin
                 }
                 else
                 {
-                    writer.Write(this.channelData);
+                    writer.Write(channelData);
                 }
             }
         }
