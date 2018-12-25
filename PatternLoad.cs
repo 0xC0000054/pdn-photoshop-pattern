@@ -178,7 +178,6 @@ namespace PatternFileTypePlugin
                     new object[] { i, name, sWidth, sHeight, imageMode }));
 #endif
 
-
                 if (patternSize > 0)
                 {
                     long nextPatternOffset = reader.Position + patternSize;
@@ -320,7 +319,6 @@ namespace PatternFileTypePlugin
                     }
                 }
             }
-
         }
 
         private static unsafe Surface RenderPattern(int width, int height, int channelCount, ImageType imageMode, byte[] pixels, byte[] indexedColorTable, byte[] alpha)
