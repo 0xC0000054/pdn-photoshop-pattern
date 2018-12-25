@@ -230,20 +230,6 @@ namespace PatternFileTypePlugin
         }
 
         /// <summary>
-        /// Writes a 4-byte floating point value to the current stream in big endian byte order.
-        /// </summary>
-        /// <param name="value">The value.</param>
-        /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
-        public unsafe void Write(float value)
-        {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
-
-        }
-
-        /// <summary>
         /// Writes the specified byte array to the current stream.
         /// </summary>
         /// <param name="bytes">The bytes.</param>
