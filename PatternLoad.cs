@@ -192,7 +192,7 @@ namespace PatternFileTypePlugin
 
                     uint unknown = reader.ReadUInt32();
 
-                    byte[] pixels = new byte[(bounds.Width * bounds.Height) * channelCount];
+                    byte[] pixels = new byte[bounds.Width * bounds.Height * channelCount];
 
                     for (int j = 0; j < channelCount; j++)
                     {
