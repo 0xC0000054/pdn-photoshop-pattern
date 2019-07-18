@@ -66,10 +66,7 @@ namespace PatternFileTypePlugin
         {
             get
             {
-                if (stream == null)
-                {
-                    throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-                }
+                VerifyNotDisposed();
 
                 // Force the stream to write any buffered data.
                 stream.Flush();
@@ -97,10 +94,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void Write(byte value)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             stream.WriteByte(value);
         }
@@ -112,10 +106,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void Write(short value)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             buffer[0] = (byte)(value >> 8);
             buffer[1] = (byte)value;
@@ -130,10 +121,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void Write(int value)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             buffer[0] = (byte)(value >> 24);
             buffer[1] = (byte)(value >> 16);
@@ -150,10 +138,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void Write(long value)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             buffer[0] = (byte)(value >> 56);
             buffer[1] = (byte)(value >> 48);
@@ -174,10 +159,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void Write(ushort value)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             buffer[0] = (byte)(value >> 8);
             buffer[1] = (byte)value;
@@ -192,10 +174,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void Write(uint value)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             buffer[0] = (byte)(value >> 24);
             buffer[1] = (byte)(value >> 16);
@@ -212,10 +191,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void Write(ulong value)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             buffer[0] = (byte)(value >> 56);
             buffer[1] = (byte)(value >> 48);
@@ -241,10 +217,8 @@ namespace PatternFileTypePlugin
             {
                 throw new ArgumentNullException(nameof(bytes));
             }
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+
+            VerifyNotDisposed();
 
             stream.Write(bytes, 0, bytes.Length);
         }
@@ -258,10 +232,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void Write(byte[] bytes, int offset, int count)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             stream.Write(bytes, offset, count);
         }
@@ -275,10 +246,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void WritePascalString(string value)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             string str = (value.Length > 255) ? value.Substring(0, 255) : value;
             byte[] bytesArray = Encoding.ASCII.GetBytes(str);
@@ -294,10 +262,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void WriteInt32Rectangle(Rectangle value)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             Write(value.Top);
             Write(value.Left);
@@ -312,15 +277,20 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public void WriteUnicodeString(string value)
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
-            }
+            VerifyNotDisposed();
 
             Write(checked(value.Length + 1));
             Write(Encoding.BigEndianUnicode.GetBytes(value));
             // The string is always null-terminated.
             Write((ushort)0);
+        }
+
+        private void VerifyNotDisposed()
+        {
+            if (stream == null)
+            {
+                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
+            }
         }
     }
 }

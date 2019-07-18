@@ -72,10 +72,7 @@ namespace PatternFileTypePlugin
         {
             get
             {
-                if (stream == null)
-                {
-                    throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-                }
+                VerifyNotDisposed();
 
                 return stream.Length;
             }
@@ -93,10 +90,7 @@ namespace PatternFileTypePlugin
         {
             get
             {
-                if (stream == null)
-                {
-                    throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-                }
+                VerifyNotDisposed();
 
                 return stream.Position - readLength + readOffset;
             }
@@ -106,10 +100,8 @@ namespace PatternFileTypePlugin
                 {
                     throw new ArgumentOutOfRangeException("value");
                 }
-                if (stream == null)
-                {
-                    throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-                }
+
+                VerifyNotDisposed();
 
                 long current = Position;
 
@@ -168,10 +160,8 @@ namespace PatternFileTypePlugin
             {
                 throw new ArgumentOutOfRangeException(nameof(count));
             }
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-            }
+
+            VerifyNotDisposed();
 
             if (count == 0)
             {
@@ -215,10 +205,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public byte ReadByte()
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-            }
+            VerifyNotDisposed();
 
             if ((readOffset + sizeof(byte)) > readLength)
             {
@@ -245,10 +232,8 @@ namespace PatternFileTypePlugin
             {
                 throw new ArgumentOutOfRangeException(nameof(count));
             }
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-            }
+
+            VerifyNotDisposed();
 
             if (count == 0)
             {
@@ -328,10 +313,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public ushort ReadUInt16()
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-            }
+            VerifyNotDisposed();
 
             if ((readOffset + sizeof(ushort)) > readLength)
             {
@@ -363,10 +345,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public uint ReadUInt32()
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-            }
+            VerifyNotDisposed();
 
             if ((readOffset + sizeof(uint)) > readLength)
             {
@@ -411,10 +390,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public ulong ReadUInt64()
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-            }
+            VerifyNotDisposed();
 
             if ((readOffset + sizeof(ulong)) > readLength)
             {
@@ -438,10 +414,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public string ReadPascalString()
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-            }
+            VerifyNotDisposed();
 
             byte stringLength = ReadByte();
 
@@ -458,10 +431,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public Rectangle ReadInt32Rectangle()
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-            }
+            VerifyNotDisposed();
 
             Rectangle rect = new Rectangle();
 
@@ -481,10 +451,7 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public string ReadUnicodeString()
         {
-            if (stream == null)
-            {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
-            }
+            VerifyNotDisposed();
 
             int lengthInChars = ReadInt32();
             byte[] bytes = ReadBytes(lengthInChars * 2);
@@ -526,6 +493,14 @@ namespace PatternFileTypePlugin
 
             readOffset = 0;
             readLength = numBytesRead;
+        }
+
+        private void VerifyNotDisposed()
+        {
+            if (stream == null)
+            {
+                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
+            }
         }
 
         private static class EmptyArray<T>
