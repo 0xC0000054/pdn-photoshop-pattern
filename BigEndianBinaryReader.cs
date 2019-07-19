@@ -207,10 +207,7 @@ namespace PatternFileTypePlugin
         {
             VerifyNotDisposed();
 
-            if ((readOffset + sizeof(byte)) > readLength)
-            {
-                FillBuffer(sizeof(byte));
-            }
+            EnsureBuffer(sizeof(byte));
 
             byte val = buffer[readOffset];
             readOffset += sizeof(byte);
@@ -315,10 +312,7 @@ namespace PatternFileTypePlugin
         {
             VerifyNotDisposed();
 
-            if ((readOffset + sizeof(ushort)) > readLength)
-            {
-                FillBuffer(sizeof(ushort));
-            }
+            EnsureBuffer(sizeof(ushort));
 
             ushort val = (ushort)((buffer[readOffset] << 8) | buffer[readOffset + 1]);
             readOffset += sizeof(ushort);
@@ -347,10 +341,7 @@ namespace PatternFileTypePlugin
         {
             VerifyNotDisposed();
 
-            if ((readOffset + sizeof(uint)) > readLength)
-            {
-                FillBuffer(sizeof(uint));
-            }
+            EnsureBuffer(sizeof(uint));
 
             uint val = (uint)((buffer[readOffset] << 24) | (buffer[readOffset + 1] << 16) | (buffer[readOffset + 2] << 8) | buffer[readOffset + 3]);
             readOffset += sizeof(uint);
@@ -392,10 +383,7 @@ namespace PatternFileTypePlugin
         {
             VerifyNotDisposed();
 
-            if ((readOffset + sizeof(ulong)) > readLength)
-            {
-                FillBuffer(sizeof(ulong));
-            }
+            EnsureBuffer(sizeof(ulong));
 
             uint hi = (uint)((buffer[readOffset] << 24) | (buffer[readOffset + 1] << 16) | (buffer[readOffset + 2] << 8) | buffer[readOffset + 3]);
             uint lo = (uint)((buffer[readOffset + 4] << 24) | (buffer[readOffset + 5] << 16) | (buffer[readOffset + 6] << 8) | buffer[readOffset + 7]);
@@ -460,6 +448,19 @@ namespace PatternFileTypePlugin
         }
 
         //////////////////////////////////////////////////////////////////
+
+        /// <summary>
+        /// Ensures that the buffer contains at least the number of bytes requested.
+        /// </summary>
+        /// <param name="count">The minimum number of bytes the buffer should contain.</param>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        private void EnsureBuffer(int count)
+        {
+            if ((readOffset + count) > readLength)
+            {
+                FillBuffer(count);
+            }
+        }
 
         /// <summary>
         /// Fills the buffer with at least the number of bytes requested.
