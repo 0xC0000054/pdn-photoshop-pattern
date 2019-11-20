@@ -247,8 +247,7 @@ namespace PatternFileTypePlugin
         {
             const ushort ChannelDepth = 8;
 
-            PatternChannel channel = new PatternChannel(ChannelDepth, visibleBounds, compression, channelData);
-            channel.WriteChannelData(writer);
+            new PatternChannel(ChannelDepth, visibleBounds, compression, channelData).WriteChannelData(writer);
         }
     }
 }
