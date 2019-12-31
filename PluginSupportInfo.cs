@@ -17,44 +17,14 @@ namespace PatternFileTypePlugin
 {
     public sealed class PluginSupportInfo : IPluginSupportInfo
     {
-        public string Author
-        {
-            get
-            {
-                return "null54";
-            }
-        }
+        public string Author => "null54";
 
-        public string Copyright
-        {
-            get
-            {
-                return ((AssemblyCopyrightAttribute)typeof(PatternFileType).Assembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute), false)[0]).Copyright;
-            }
-        }
+        public string Copyright => ((AssemblyCopyrightAttribute)typeof(PatternFileType).Assembly.GetCustomAttributes(typeof(AssemblyCopyrightAttribute), false)[0]).Copyright;
 
-        public string DisplayName
-        {
-            get
-            {
-                return PatternFileType.StaticName;
-            }
-        }
+        public string DisplayName => PatternFileType.StaticName;
 
-        public Version Version
-        {
-            get
-            {
-                return typeof(PatternFileType).Assembly.GetName().Version;
-            }
-        }
+        public Version Version => typeof(PatternFileType).Assembly.GetName().Version;
 
-        public Uri WebsiteUri
-        {
-            get
-            {
-                return new Uri("http://forums.getpaint.net/index.php?/topic/25696-photoshop-pattern-filetype/");
-            }
-        }
+        public Uri WebsiteUri => new Uri("http://forums.getpaint.net/index.php?/topic/25696-photoshop-pattern-filetype/");
     }
 }

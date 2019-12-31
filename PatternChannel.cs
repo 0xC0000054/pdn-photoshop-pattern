@@ -91,37 +91,13 @@ namespace PatternFileTypePlugin
             channelData = data;
         }
 
-        public bool Enabled
-        {
-            get
-            {
-                return enabled;
-            }
-        }
+        public bool Enabled => enabled;
 
-        public uint Size
-        {
-            get
-            {
-                return size;
-            }
-        }
+        public uint Size => size;
 
-        public Rectangle Bounds
-        {
-            get
-            {
-                return bounds;
-            }
-        }
+        public Rectangle Bounds => bounds;
 
-        public ushort Depth
-        {
-            get
-            {
-                return depth16;
-            }
-        }
+        public ushort Depth => depth16;
 
         public byte[] GetChannelData()
         {

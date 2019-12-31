@@ -20,13 +20,7 @@ namespace PatternFileTypePlugin
     [PluginSupportInfo(typeof(PluginSupportInfo))]
     public sealed class PatternFileType : PropertyBasedFileType
     {
-        public static string StaticName
-        {
-            get
-            {
-                return "Photoshop Pattern";
-            }
-        }
+        public static string StaticName => "Photoshop Pattern";
 
         public PatternFileType() : base(
             StaticName,
