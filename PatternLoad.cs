@@ -48,7 +48,7 @@ namespace PatternFileTypePlugin
 
                 int maxWidth = 0;
                 int maxHeight = 0;
-                foreach (var item in patterns)
+                foreach (PatternData item in patterns)
                 {
                     if (item.pattern.Width > maxWidth)
                     {
