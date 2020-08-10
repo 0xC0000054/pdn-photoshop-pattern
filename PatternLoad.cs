@@ -89,11 +89,7 @@ namespace PatternFileTypePlugin
                         }
                         finally
                         {
-                            if (tempLayer != null)
-                            {
-                                tempLayer.Dispose();
-                                tempLayer = null;
-                            }
+                            tempLayer?.Dispose();
                         }
 
                         tempDoc.Layers.Add(layer);
@@ -107,11 +103,7 @@ namespace PatternFileTypePlugin
                 }
                 finally
                 {
-                    if (tempDoc != null)
-                    {
-                        tempDoc.Dispose();
-                        tempDoc = null;
-                    }
+                    tempDoc?.Dispose();
                 }
 
                 return doc;
