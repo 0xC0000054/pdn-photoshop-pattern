@@ -38,7 +38,7 @@ namespace PatternFileTypePlugin
                     SaveLayer(writer, layer, rle);
 
                     progressPercentage += progressDelta;
-                    progressCallback(null, new ProgressEventArgs(progressPercentage));
+                    progressCallback?.Invoke(null, new ProgressEventArgs(progressPercentage));
                 }
             }
         }
