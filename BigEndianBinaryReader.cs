@@ -405,9 +405,18 @@ namespace PatternFileTypePlugin
 
             byte stringLength = ReadByte();
 
-            byte[] bytes = ReadBytes(stringLength);
+            if (stringLength == 0)
+            {
+                return string.Empty;
+            }
 
-            return Encoding.ASCII.GetString(bytes);
+            EnsureBuffer(stringLength);
+
+            string result = Encoding.ASCII.GetString(buffer, readOffset, stringLength);
+
+            readOffset += stringLength;
+
+            return result;
         }
 
         /// <summary>
@@ -441,9 +450,40 @@ namespace PatternFileTypePlugin
             VerifyNotDisposed();
 
             int lengthInChars = ReadInt32();
-            byte[] bytes = ReadBytes(lengthInChars * 2);
 
-            return Encoding.BigEndianUnicode.GetString(bytes).TrimEnd('\0');
+            if (lengthInChars == 0)
+            {
+                return string.Empty;
+            }
+
+            int lengthInBytes = checked(lengthInChars * 2);
+
+            EnsureBuffer(lengthInBytes);
+
+            int stringLengthInBytes = lengthInBytes;
+
+            // Skip any UTF-16 NUL characters at the end of the string.
+            while (stringLengthInBytes > 0
+                   && buffer[readOffset + stringLengthInBytes - 1] == 0
+                   && buffer[readOffset + stringLengthInBytes - 2] == 0)
+            {
+                stringLengthInBytes -= 2;
+            }
+
+            string result;
+
+            if (stringLengthInBytes == 0)
+            {
+                result = string.Empty;
+            }
+            else
+            {
+                result = Encoding.BigEndianUnicode.GetString(buffer, readOffset, stringLengthInBytes);
+            }
+
+            readOffset += lengthInBytes;
+
+            return result;
         }
 
         //////////////////////////////////////////////////////////////////
