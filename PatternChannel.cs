@@ -16,6 +16,7 @@ namespace PatternFileTypePlugin
 {
     internal sealed class PatternChannel
     {
+#pragma warning disable IDE0032 // Use auto property
         private readonly bool enabled;
         private readonly uint size;
         private readonly uint depth32;
@@ -23,6 +24,7 @@ namespace PatternFileTypePlugin
         private readonly ushort depth16;
         private readonly PatternImageCompression compression;
         private byte[] channelData;
+#pragma warning restore IDE0032 // Use auto property
 
         public PatternChannel(BigEndianBinaryReader reader)
         {
