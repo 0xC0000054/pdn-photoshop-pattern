@@ -149,6 +149,10 @@ namespace PatternFileTypePlugin
                 {
                     channelCount = 1;
                 }
+                else
+                {
+                    throw new FormatException(string.Format(CultureInfo.CurrentCulture, Resources.UnsupportedImageTypeFormat, imageMode));
+                }
 
                 uint subVersion = reader.ReadUInt32();
                 if (subVersion != PatternConstants.RecordSubVersion)
