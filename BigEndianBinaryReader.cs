@@ -429,7 +429,9 @@ namespace PatternFileTypePlugin
         {
             VerifyNotDisposed();
 
+#pragma warning disable IDE0017 // Simplify object initialization
             Rectangle rect = new Rectangle();
+#pragma warning restore IDE0017 // Simplify object initialization
 
             rect.Y = ReadInt32();
             rect.X = ReadInt32();
