@@ -25,7 +25,7 @@ namespace PatternFileTypePlugin
         public PatternFileType() : base(
             StaticName,
             FileTypeFlags.SupportsLoading | FileTypeFlags.SupportsSaving | FileTypeFlags.SupportsLayers | FileTypeFlags.SavesWithProgress,
-            new string[] {".pat"})
+            new string[] { ".pat" })
         {
         }
 
