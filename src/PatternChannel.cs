@@ -52,11 +52,8 @@ namespace PatternFileTypePlugin
 
             if (compression == PatternImageCompression.RLE)
             {
-                short[] rowByteCount = new short[height];
-                for (int i = 0; i < height; i++)
-                {
-                    rowByteCount[i] = reader.ReadInt16();
-                }
+                // Skip the row byte counts
+                reader.Position += (long)height * sizeof(short);
 
                 Span<byte> channelDataSpan = channelData;
 
