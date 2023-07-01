@@ -27,8 +27,11 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.Buffers;
+using System.Buffers.Binary;
 using System.Drawing;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace PatternFileTypePlugin
@@ -98,7 +101,7 @@ namespace PatternFileTypePlugin
             {
                 if (value < 0)
                 {
-                    throw new ArgumentOutOfRangeException("value");
+                    throw new ArgumentOutOfRangeException(nameof(value));
                 }
 
                 VerifyNotDisposed();
@@ -151,10 +154,8 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public int Read(byte[] bytes, int offset, int count)
         {
-            if (bytes == null)
-            {
-                throw new ArgumentNullException(nameof(bytes));
-            }
+            ArgumentNullException.ThrowIfNull(bytes);
+
             if (count < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(count));
@@ -162,37 +163,75 @@ namespace PatternFileTypePlugin
 
             VerifyNotDisposed();
 
+            return ReadInternal(new Span<byte>(bytes, offset, count));
+        }
+
+        /// <summary>
+        /// Reads the specified number of bytes from the stream.
+        /// </summary>
+        /// <param name="destination">The destination.</param>
+        /// <returns>The number of bytes read from the stream.</returns>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        public int Read(Span<byte> destination)
+        {
+            VerifyNotDisposed();
+
+            return ReadInternal(destination);
+        }
+
+
+        /// <summary>
+        /// Reads the specified number of bytes from the stream, starting from a specified point in the byte array.
+        /// </summary>
+        /// <param name="bytes">The bytes.</param>
+        /// <param name="offset">The starting offset in the array.</param>
+        /// <param name="count">The count.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="bytes"/> is null.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is negative.</exception>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        public void ProperRead(byte[] bytes, int offset, int count)
+        {
+            ArgumentNullException.ThrowIfNull(bytes);
+
+            if (count < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count));
+            }
+
+            ProperRead(new Span<byte>(bytes, offset, count));
+        }
+
+        /// <summary>
+        /// Reads the specified number of bytes from the stream.
+        /// </summary>
+        /// <param name="span">The span.</param>
+        /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
+        /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        public void ProperRead(Span<byte> span)
+        {
+            VerifyNotDisposed();
+
+            int count = span.Length;
+
             if (count == 0)
             {
-                return 0;
+                return;
             }
 
-            if ((readOffset + count) <= readLength)
-            {
-                Buffer.BlockCopy(buffer, readOffset, bytes, offset, count);
-                readOffset += count;
+            int totalBytesRead = 0;
 
-                return count;
-            }
-            else
+            while (totalBytesRead < count)
             {
-                // Ensure that any bytes at the end of the current buffer are included.
-                int bytesUnread = readLength - readOffset;
+                int bytesRead = ReadInternal(span.Slice(totalBytesRead, count - totalBytesRead));
 
-                if (bytesUnread > 0)
+                if (bytesRead == 0)
                 {
-                    Buffer.BlockCopy(buffer, readOffset, bytes, offset, bytesUnread);
+                    throw new EndOfStreamException();
                 }
 
-                // Invalidate the existing buffer.
-                readOffset = 0;
-                readLength = 0;
-
-                int totalBytesRead = bytesUnread;
-
-                totalBytesRead += stream.Read(bytes, offset + bytesUnread, count - bytesUnread);
-
-                return totalBytesRead;
+                totalBytesRead += bytesRead;
             }
         }
 
@@ -204,14 +243,19 @@ namespace PatternFileTypePlugin
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
         public byte ReadByte()
         {
-            VerifyNotDisposed();
+            return readOffset < readLength ? buffer[readOffset++] : ReadByteSlow();
 
-            EnsureBuffer(sizeof(byte));
+            byte ReadByteSlow()
+            {
+                VerifyNotDisposed();
 
-            byte val = buffer[readOffset];
-            readOffset += sizeof(byte);
+                FillBuffer(sizeof(byte));
 
-            return val;
+                byte val = buffer[readOffset];
+                readOffset += sizeof(byte);
+
+                return val;
+            }
         }
 
         /// <summary>
@@ -233,7 +277,7 @@ namespace PatternFileTypePlugin
 
             if (count == 0)
             {
-                return EmptyArray<byte>.Value;
+                return Array.Empty<byte>();
             }
 
             byte[] bytes = new byte[count];
@@ -313,10 +357,10 @@ namespace PatternFileTypePlugin
 
             EnsureBuffer(sizeof(ushort));
 
-            ushort val = (ushort)((buffer[readOffset] << 8) | buffer[readOffset + 1]);
+            ushort value = Unsafe.ReadUnaligned<ushort>(ref buffer[readOffset]);
             readOffset += sizeof(ushort);
 
-            return val;
+            return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
         /// <summary>
@@ -342,10 +386,10 @@ namespace PatternFileTypePlugin
 
             EnsureBuffer(sizeof(uint));
 
-            uint val = (uint)((buffer[readOffset] << 24) | (buffer[readOffset + 1] << 16) | (buffer[readOffset + 2] << 8) | buffer[readOffset + 3]);
+            uint value = Unsafe.ReadUnaligned<uint>(ref buffer[readOffset]);
             readOffset += sizeof(uint);
 
-            return val;
+            return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
         /// <summary>
@@ -384,11 +428,10 @@ namespace PatternFileTypePlugin
 
             EnsureBuffer(sizeof(ulong));
 
-            uint hi = (uint)((buffer[readOffset] << 24) | (buffer[readOffset + 1] << 16) | (buffer[readOffset + 2] << 8) | buffer[readOffset + 3]);
-            uint lo = (uint)((buffer[readOffset + 4] << 24) | (buffer[readOffset + 5] << 16) | (buffer[readOffset + 6] << 8) | buffer[readOffset + 7]);
+            ulong value = Unsafe.ReadUnaligned<ulong>(ref buffer[readOffset]);
             readOffset += sizeof(ulong);
 
-            return (((ulong)hi) << 32) | lo;
+            return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
         //////////////////////////////////////////////////////////////////
@@ -460,30 +503,55 @@ namespace PatternFileTypePlugin
 
             int lengthInBytes = checked(lengthInChars * 2);
 
-            EnsureBuffer(lengthInBytes);
+            Span<byte> stringData;
+            byte[] arrayFromPool = null;
 
-            int stringLengthInBytes = lengthInBytes;
-
-            // Skip any UTF-16 NUL characters at the end of the string.
-            while (stringLengthInBytes > 0
-                   && buffer[readOffset + stringLengthInBytes - 1] == 0
-                   && buffer[readOffset + stringLengthInBytes - 2] == 0)
+            if (lengthInBytes <= bufferSize)
             {
-                stringLengthInBytes -= 2;
+                EnsureBuffer(lengthInBytes);
+                stringData = new Span<byte>(buffer, readOffset, lengthInBytes);
+
+                readOffset += lengthInBytes;
+            }
+            else
+            {
+                arrayFromPool = ArrayPool<byte>.Shared.Rent(lengthInBytes);
+                stringData = new Span<byte>(arrayFromPool, 0, lengthInBytes);
+                ProperRead(stringData);
             }
 
             string result;
 
-            if (stringLengthInBytes == 0)
+            try
             {
-                result = string.Empty;
-            }
-            else
-            {
-                result = Encoding.BigEndianUnicode.GetString(buffer, readOffset, stringLengthInBytes);
-            }
+                int stringLengthInBytes = lengthInBytes;
 
-            readOffset += lengthInBytes;
+                // Skip any UTF-16 NUL characters at the end of the string.
+                while (stringLengthInBytes > 0
+                       && stringData[stringLengthInBytes - 1] == 0
+                       && stringData[stringLengthInBytes - 2] == 0)
+                {
+                    stringLengthInBytes -= 2;
+                }
+
+                stringData = stringData.Slice(0, stringLengthInBytes);
+
+                if (stringData.Length == 0)
+                {
+                    result = string.Empty;
+                }
+                else
+                {
+                    result = Encoding.BigEndianUnicode.GetString(stringData);
+                }
+            }
+            finally
+            {
+                if (arrayFromPool != null)
+                {
+                    ArrayPool<byte>.Shared.Return(arrayFromPool);
+                }
+            }
 
             return result;
         }
@@ -510,6 +578,92 @@ namespace PatternFileTypePlugin
         /// <exception cref="EndOfStreamException">The end of the stream has been reached.</exception>
         private void FillBuffer(int minBytes)
         {
+            if (!TryFillBuffer(minBytes))
+            {
+                ThrowEndOfStreamException();
+            }
+
+            static void ThrowEndOfStreamException()
+            {
+                throw new EndOfStreamException();
+            }
+        }
+
+        /// <summary>
+        /// Reads the specified number of bytes from the stream.
+        /// </summary>
+        /// <param name="destination">The span.</param>
+        /// <returns>The number of bytes read from the stream.</returns>
+        private int ReadInternal(Span<byte> destination)
+        {
+            int count = destination.Length;
+
+            if (count == 0)
+            {
+                return 0;
+            }
+
+            if ((readOffset + count) <= readLength)
+            {
+                new ReadOnlySpan<byte>(buffer, readOffset, count).CopyTo(destination);
+                readOffset += count;
+
+                return count;
+            }
+            else
+            {
+                int totalBytesRead;
+
+                if (count < bufferSize)
+                {
+                    // This is an optimization for sequentially reading small ranges of bytes
+                    // from a file.
+                    // For example, a file signature that will be followed by other header data.
+                    //
+                    // TryFillBuffer may return fewer bytes than were requested if the end of the
+                    // stream has been reached.
+                    totalBytesRead = TryFillBuffer(count) ? count : readLength;
+
+                    if (totalBytesRead > 0)
+                    {
+                        new ReadOnlySpan<byte>(buffer, readOffset, totalBytesRead).CopyTo(destination.Slice(0, totalBytesRead));
+
+                        readOffset += totalBytesRead;
+                    }
+                }
+                else
+                {
+                    // Ensure that any bytes at the end of the current buffer are included.
+                    int bytesUnread = readLength - readOffset;
+
+                    if (bytesUnread > 0)
+                    {
+                        new ReadOnlySpan<byte>(buffer, readOffset, bytesUnread).CopyTo(destination);
+                    }
+
+                    totalBytesRead = bytesUnread;
+                    int bytesRemaining = count - bytesUnread;
+
+                    // Invalidate the existing buffer.
+                    readOffset = 0;
+                    readLength = 0;
+
+                    totalBytesRead += stream.Read(destination.Slice(bytesUnread, bytesRemaining));
+                }
+
+                return totalBytesRead;
+            }
+        }
+
+        /// <summary>
+        /// Attempts to fill the buffer with at least the number of bytes requested.
+        /// </summary>
+        /// <param name="minBytes">The minimum number of bytes to place in the buffer.</param>
+        /// <returns>
+        /// <see langword="true"/> if the buffer contains at least <paramref name="minBytes"/>; otherwise, <see langword="false"/>.
+        /// </returns>
+        private bool TryFillBuffer(int minBytes)
+        {
             int bytesUnread = readLength - readOffset;
 
             if (bytesUnread > 0)
@@ -517,24 +671,22 @@ namespace PatternFileTypePlugin
                 Buffer.BlockCopy(buffer, readOffset, buffer, 0, bytesUnread);
             }
 
-            int numBytesToRead = bufferSize - bytesUnread;
-            int numBytesRead = bytesUnread;
+            readOffset = 0;
+            readLength = bytesUnread;
             do
             {
-                int n = stream.Read(buffer, numBytesRead, numBytesToRead);
+                int bytesRead = stream.Read(buffer, readLength, bufferSize - readLength);
 
-                if (n == 0)
+                if (bytesRead == 0)
                 {
-                    throw new EndOfStreamException();
+                    return false;
                 }
 
-                numBytesRead += n;
-                numBytesToRead -= n;
+                readLength += bytesRead;
 
-            } while (numBytesRead < minBytes);
+            } while (readLength < minBytes);
 
-            readOffset = 0;
-            readLength = numBytesRead;
+            return true;
         }
 
         private void VerifyNotDisposed()
@@ -543,11 +695,6 @@ namespace PatternFileTypePlugin
             {
                 throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
             }
-        }
-
-        private static class EmptyArray<T>
-        {
-            public static readonly T[] Value = new T[0];
         }
     }
 }

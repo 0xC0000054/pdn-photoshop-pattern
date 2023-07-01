@@ -27,19 +27,18 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.Buffers.Binary;
 using System.Drawing;
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace PatternFileTypePlugin
 {
     internal sealed class BigEndianBinaryWriter : IDisposable
     {
-#pragma warning disable IDE0032 // Disable the 'Use Auto Property' suggestion
         private Stream stream;
-#pragma warning restore IDE0032
 
-        private readonly byte[] buffer;
         private readonly bool leaveOpen;
 
         /// <summary>
@@ -51,27 +50,29 @@ namespace PatternFileTypePlugin
         public BigEndianBinaryWriter(Stream stream, bool leaveOpen)
         {
             this.stream = stream ?? throw new ArgumentNullException(nameof(stream));
-            buffer = new byte[sizeof(double)];
             this.leaveOpen = leaveOpen;
         }
 
         /// <summary>
-        /// Gets the underlying stream of the <see cref="BigEndianBinaryWriter"/>.
+        /// Gets or sets the position of the underlying stream.
         /// </summary>
         /// <value>
-        /// The underlying stream of the <see cref="BigEndianBinaryWriter"/>.
+        /// The position of the underlying stream.
         /// </value>
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
-        public Stream BaseStream
+        public long Position
         {
             get
             {
                 VerifyNotDisposed();
 
-                // Force the stream to write any buffered data.
-                stream.Flush();
+                return stream.Position;
+            }
+            set
+            {
+                VerifyNotDisposed();
 
-                return stream;
+                stream.Position = value;
             }
         }
 
@@ -104,14 +105,14 @@ namespace PatternFileTypePlugin
         /// </summary>
         /// <param name="value">The value.</param>
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        [SkipLocalsInit]
         public void Write(short value)
         {
             VerifyNotDisposed();
 
-            buffer[0] = (byte)(value >> 8);
-            buffer[1] = (byte)value;
-
-            stream.Write(buffer, 0, 2);
+            Span<byte> buffer = stackalloc byte[sizeof(short)];
+            BinaryPrimitives.WriteInt16BigEndian(buffer, value);
+            stream.Write(buffer);
         }
 
         /// <summary>
@@ -119,16 +120,14 @@ namespace PatternFileTypePlugin
         /// </summary>
         /// <param name="value">The value.</param>
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        [SkipLocalsInit]
         public void Write(int value)
         {
             VerifyNotDisposed();
 
-            buffer[0] = (byte)(value >> 24);
-            buffer[1] = (byte)(value >> 16);
-            buffer[2] = (byte)(value >> 8);
-            buffer[3] = (byte)value;
-
-            stream.Write(buffer, 0, 4);
+            Span<byte> buffer = stackalloc byte[sizeof(int)];
+            BinaryPrimitives.WriteInt32BigEndian(buffer, value);
+            stream.Write(buffer);
         }
 
         /// <summary>
@@ -136,20 +135,14 @@ namespace PatternFileTypePlugin
         /// </summary>
         /// <param name="value">The value.</param>
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        [SkipLocalsInit]
         public void Write(long value)
         {
             VerifyNotDisposed();
 
-            buffer[0] = (byte)(value >> 56);
-            buffer[1] = (byte)(value >> 48);
-            buffer[2] = (byte)(value >> 40);
-            buffer[3] = (byte)(value >> 32);
-            buffer[4] = (byte)(value >> 24);
-            buffer[5] = (byte)(value >> 16);
-            buffer[6] = (byte)(value >> 8);
-            buffer[7] = (byte)value;
-
-            stream.Write(buffer, 0, 8);
+            Span<byte> buffer = stackalloc byte[sizeof(long)];
+            BinaryPrimitives.WriteInt64BigEndian(buffer, value);
+            stream.Write(buffer);
         }
 
         /// <summary>
@@ -157,14 +150,14 @@ namespace PatternFileTypePlugin
         /// </summary>
         /// <param name="value">The value.</param>
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        [SkipLocalsInit]
         public void Write(ushort value)
         {
             VerifyNotDisposed();
 
-            buffer[0] = (byte)(value >> 8);
-            buffer[1] = (byte)value;
-
-            stream.Write(buffer, 0, 2);
+            Span<byte> buffer = stackalloc byte[sizeof(ushort)];
+            BinaryPrimitives.WriteUInt16BigEndian(buffer, value);
+            stream.Write(buffer);
         }
 
         /// <summary>
@@ -172,16 +165,14 @@ namespace PatternFileTypePlugin
         /// </summary>
         /// <param name="value">The value.</param>
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        [SkipLocalsInit]
         public void Write(uint value)
         {
             VerifyNotDisposed();
 
-            buffer[0] = (byte)(value >> 24);
-            buffer[1] = (byte)(value >> 16);
-            buffer[2] = (byte)(value >> 8);
-            buffer[3] = (byte)value;
-
-            stream.Write(buffer, 0, 4);
+            Span<byte> buffer = stackalloc byte[sizeof(uint)];
+            BinaryPrimitives.WriteUInt32BigEndian(buffer, value);
+            stream.Write(buffer);
         }
 
         /// <summary>
@@ -189,20 +180,14 @@ namespace PatternFileTypePlugin
         /// </summary>
         /// <param name="value">The value.</param>
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        [SkipLocalsInit]
         public void Write(ulong value)
         {
             VerifyNotDisposed();
 
-            buffer[0] = (byte)(value >> 56);
-            buffer[1] = (byte)(value >> 48);
-            buffer[2] = (byte)(value >> 40);
-            buffer[3] = (byte)(value >> 32);
-            buffer[4] = (byte)(value >> 24);
-            buffer[5] = (byte)(value >> 16);
-            buffer[6] = (byte)(value >> 8);
-            buffer[7] = (byte)value;
-
-            stream.Write(buffer, 0, 8);
+            Span<byte> buffer = stackalloc byte[sizeof(ulong)];
+            BinaryPrimitives.WriteUInt64BigEndian(buffer, value);
+            stream.Write(buffer);
         }
 
         /// <summary>
@@ -244,15 +229,26 @@ namespace PatternFileTypePlugin
         /// </summary>
         /// <param name="value">The value.</param>
         /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        [SkipLocalsInit]
         public void WritePascalString(string value)
         {
             VerifyNotDisposed();
 
-            string str = (value.Length > 255) ? value.Substring(0, 255) : value;
-            byte[] bytesArray = Encoding.ASCII.GetBytes(str);
+            ReadOnlySpan<char> str = value;
 
-            Write((byte)bytesArray.Length);
-            Write(bytesArray);
+            if (str.Length > 255)
+            {
+                str = str.Slice(0, 255);
+            }
+
+            Span<byte> pascalString = stackalloc byte[256];
+
+            int bytesWritten = Encoding.ASCII.GetBytes(str, pascalString.Slice(1));
+
+            pascalString[0] = (byte)bytesWritten;
+            pascalString = pascalString.Slice(0, bytesWritten + 1);
+
+            stream.Write(pascalString);
         }
 
         /// <summary>
@@ -289,7 +285,7 @@ namespace PatternFileTypePlugin
         {
             if (stream == null)
             {
-                throw new ObjectDisposedException(nameof(BigEndianBinaryReader));
+                throw new ObjectDisposedException(nameof(BigEndianBinaryWriter));
             }
         }
     }

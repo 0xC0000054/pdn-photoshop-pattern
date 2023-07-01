@@ -34,7 +34,7 @@ namespace PatternFileTypePlugin
     {
         private readonly long lengthFieldOffset;
         private readonly long startPosition;
-        private BigEndianBinaryWriter writer;
+        private readonly BigEndianBinaryWriter writer;
         private bool disposed;
 
         public LengthWriter(BigEndianBinaryWriter writer)
@@ -42,12 +42,12 @@ namespace PatternFileTypePlugin
             this.writer = writer;
             // we will write the correct length later, so remember
             // the position
-            lengthFieldOffset = writer.BaseStream.Position;
+            lengthFieldOffset = writer.Position;
             writer.Write(0xFEEDFEED);
 
             // remember the start  position for calculation Image
             // resources length
-            startPosition = writer.BaseStream.Position;
+            startPosition = writer.Position;
             disposed = false;
         }
 
@@ -55,13 +55,13 @@ namespace PatternFileTypePlugin
         {
             if (!disposed)
             {
-                long endPosition = writer.BaseStream.Position;
+                long endPosition = writer.Position;
                 long length = endPosition - startPosition;
 
-                writer.BaseStream.Position = lengthFieldOffset;
+                writer.Position = lengthFieldOffset;
                 writer.Write((uint)length);
 
-                writer.BaseStream.Position = endPosition;
+                writer.Position = endPosition;
 
                 disposed = true;
             }

@@ -40,7 +40,7 @@ namespace PatternFileTypePlugin
             private byte lastValue;
             private int idxPacketData;
             private int packetLength;
-            private Stream stream;
+            private readonly BigEndianBinaryWriter writer;
             private byte[] data;
 
             private const int maxPacketLength = 128;
@@ -51,14 +51,14 @@ namespace PatternFileTypePlugin
                 if (rlePacket)
                 {
                     header = (byte)(-(packetLength - 1));
-                    stream.WriteByte(header);
-                    stream.WriteByte(lastValue);
+                    writer.Write(header);
+                    writer.Write(lastValue);
                 }
                 else
                 {
                     header = (byte)(packetLength - 1);
-                    stream.WriteByte(header);
-                    stream.Write(data, idxPacketData, packetLength);
+                    writer.Write(header);
+                    writer.Write(data, idxPacketData, packetLength);
                 }
 
                 packetLength = 0;
@@ -133,22 +133,22 @@ namespace PatternFileTypePlugin
                 Flush();
             }
 
-            internal RlePacketStateMachine(Stream stream)
+            internal RlePacketStateMachine(BigEndianBinaryWriter writer)
             {
-                this.stream = stream;
+                this.writer = writer;
             }
         }
 
         ////////////////////////////////////////////////////////////////////////
 
-        public static int EncodedRow(Stream stream, byte[] imgData, int startIdx, int columns)
+        public static int EncodedRow(BigEndianBinaryWriter writer, byte[] imgData, int startIdx, int columns)
         {
-            long startPosition = stream.Position;
+            long startPosition = writer.Position;
 
-            RlePacketStateMachine machine = new(stream);
+            RlePacketStateMachine machine = new(writer);
             machine.PushRow(imgData, startIdx, startIdx + columns);
 
-            return (int)(stream.Position - startPosition);
+            return (int)(writer.Position - startPosition);
         }
 
         ////////////////////////////////////////////////////////////////////////

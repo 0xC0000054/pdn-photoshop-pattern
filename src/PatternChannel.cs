@@ -122,7 +122,7 @@ namespace PatternFileTypePlugin
                     int width = bounds.Width;
                     int height = bounds.Height;
 
-                    long rowCountPosition = writer.BaseStream.Position;
+                    long rowCountPosition = writer.Position;
 
                     short[] rowCount = new short[height];
                     for (int i = 0; i < height; i++)
@@ -133,18 +133,18 @@ namespace PatternFileTypePlugin
 
                     for (int y = 0; y < height; y++)
                     {
-                        rowCount[y] = (short)RLEHelper.EncodedRow(writer.BaseStream, channelData, y * width, width);
+                        rowCount[y] = (short)RLEHelper.EncodedRow(writer, channelData, y * width, width);
                     }
 
-                    long current = writer.BaseStream.Position;
+                    long current = writer.Position;
 
-                    writer.BaseStream.Position = rowCountPosition;
+                    writer.Position = rowCountPosition;
                     for (int i = 0; i < height; i++)
                     {
                         writer.Write(rowCount[i]);
                     }
 
-                    writer.BaseStream.Position = current;
+                    writer.Position = current;
                 }
                 else
                 {
