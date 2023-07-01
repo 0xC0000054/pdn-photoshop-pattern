@@ -337,7 +337,7 @@ namespace PatternFileTypePlugin
                         for (int y = 0; y < height; y++)
                         {
                             byte* src = ptr + (y * srcStride);
-                            ColorBgra* dst = temp.GetRowAddressUnchecked(y);
+                            ColorBgra* dst = temp.GetRowPointerUnchecked(y);
 
                             for (int x = 0; x < width; x++)
                             {
@@ -372,7 +372,7 @@ namespace PatternFileTypePlugin
                             {
                                 byte* src = ptr + (y * srcStride);
                                 byte* al = alPtr + (y * width);
-                                ColorBgra* dst = temp.GetRowAddressUnchecked(y);
+                                ColorBgra* dst = temp.GetRowPointerUnchecked(y);
 
                                 for (int x = 0; x < width; x++)
                                 {

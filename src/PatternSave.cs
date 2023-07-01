@@ -98,7 +98,7 @@ namespace PatternFileTypePlugin
 
             for (int y = 0; y < surface.Height; y++)
             {
-                ColorBgra* p = surface.GetRowAddress(y);
+                ColorBgra* p = surface.GetRowPointerUnchecked(y);
 
                 for (int x = 0; x < surface.Width; x++)
                 {
@@ -142,7 +142,7 @@ namespace PatternFileTypePlugin
 
             for (int y = bounds.Top; y < bounds.Bottom; y++)
             {
-                ColorBgra* p = surface.GetPointAddressUnchecked(bounds.Left, y);
+                ColorBgra* p = surface.GetPointPointerUnchecked(bounds.Left, y);
                 for (int x = bounds.Left; x < bounds.Right; x++)
                 {
                     if (p->A < 255)
@@ -171,7 +171,7 @@ namespace PatternFileTypePlugin
             int index = 0;
             for (int y = visibleBounds.Top; y < visibleBounds.Bottom; y++)
             {
-                ColorBgra* p = surface.GetPointAddressUnchecked(visibleBounds.Left, y);
+                ColorBgra* p = surface.GetPointPointerUnchecked(visibleBounds.Left, y);
 
                 for (int x = visibleBounds.Left; x < visibleBounds.Right; x++)
                 {
@@ -214,7 +214,7 @@ namespace PatternFileTypePlugin
             int index = 0;
             for (int y = visibleBounds.Top; y < visibleBounds.Bottom; y++)
             {
-                ColorBgra* p = surface.GetPointAddressUnchecked(visibleBounds.Left, y);
+                ColorBgra* p = surface.GetPointPointerUnchecked(visibleBounds.Left, y);
 
                 for (int x = visibleBounds.Left; x < visibleBounds.Right; x++)
                 {

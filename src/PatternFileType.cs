@@ -21,11 +21,16 @@ namespace PatternFileTypePlugin
     public sealed class PatternFileType : PropertyBasedFileType
     {
         public static string StaticName => "Photoshop Pattern";
+        private static readonly IReadOnlyList<string> FileExtensions = new string[] { ".pat" };
 
         public PatternFileType() : base(
             StaticName,
-            FileTypeFlags.SupportsLoading | FileTypeFlags.SupportsSaving | FileTypeFlags.SupportsLayers | FileTypeFlags.SavesWithProgress,
-            new string[] { ".pat" })
+            new FileTypeOptions
+            {
+                LoadExtensions = FileExtensions,
+                SaveExtensions = FileExtensions,
+                SupportsLayers = true
+            })
         {
         }
 
