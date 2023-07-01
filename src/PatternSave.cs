@@ -22,7 +22,7 @@ namespace PatternFileTypePlugin
         {
             bool rle = token.GetProperty<PaintDotNet.PropertySystem.BooleanProperty>(PropertyNames.RLE).Value;
 
-            using (BigEndianBinaryWriter writer = new BigEndianBinaryWriter(output, true))
+            using (BigEndianBinaryWriter writer = new(output, true))
             {
                 writer.Write(PatternConstants.FileSignature);
                 writer.Write(PatternConstants.FileVersion);

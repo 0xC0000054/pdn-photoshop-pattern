@@ -27,6 +27,6 @@ namespace PatternFileTypePlugin
 
         public Version Version => assembly.GetName().Version;
 
-        public Uri WebsiteUri => new Uri("http://forums.getpaint.net/index.php?/topic/25696-photoshop-pattern-filetype/");
+        public Uri WebsiteUri => new("http://forums.getpaint.net/index.php?/topic/25696-photoshop-pattern-filetype/");
     }
 }

@@ -23,7 +23,7 @@ namespace PatternFileTypePlugin
     {
         public static Document Load(Stream stream)
         {
-            using (BigEndianBinaryReader reader = new BigEndianBinaryReader(stream))
+            using (BigEndianBinaryReader reader = new(stream))
             {
                 uint sig = reader.ReadUInt32();
                 if (sig != PatternConstants.FileSignature)
@@ -112,7 +112,7 @@ namespace PatternFileTypePlugin
 
         private static unsafe List<PatternData> LoadPatterns(BigEndianBinaryReader reader, uint count)
         {
-            List<PatternData> patterns = new List<PatternData>((int)count);
+            List<PatternData> patterns = new((int)count);
 
             for (int i = 0; i < count; i++)
             {
@@ -192,7 +192,7 @@ namespace PatternFileTypePlugin
 
                     for (int j = 0; j < channelCount; j++)
                     {
-                        PatternChannel channel = new PatternChannel(reader);
+                        PatternChannel channel = new(reader);
                         DecodeChannelData(channel, pixels, j, channelCount);
                     }
 
@@ -251,7 +251,7 @@ namespace PatternFileTypePlugin
                     // Skip the padding bytes.
                     reader.Position += paddingSize;
 
-                    PatternChannel channel = new PatternChannel(reader);
+                    PatternChannel channel = new(reader);
 
                     if (channel.Enabled && channel.Size > 0)
                     {

@@ -41,7 +41,7 @@ namespace PatternFileTypePlugin
 
         public override PropertyCollection OnCreateSavePropertyCollection()
         {
-            List<Property> props = new List<Property>
+            List<Property> props = new()
             {
                 new BooleanProperty(PropertyNames.RLE, true),
             };
