@@ -44,6 +44,9 @@
       <DesignTime>True</DesignTime>
     </Compile>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="IO\" />
+  </ItemGroup>
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="copy &quot;$(TargetPath)&quot; &quot;D:\Program Files\paint.net\FileTypes&quot; /y" />
   </Target>
