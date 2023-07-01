@@ -58,9 +58,11 @@ namespace PatternFileTypePlugin
                     rowByteCount[i] = reader.ReadInt16();
                 }
 
+                Span<byte> channelDataSpan = channelData;
+
                 for (int y = 0; y < height; y++)
                 {
-                    RLEHelper.DecodedRow(reader, channelData, y * channelDataStride, channelDataStride);
+                    RLEHelper.DecodedRow(reader, channelDataSpan.Slice(y * channelDataStride, channelDataStride));
                 }
             }
             else
@@ -131,9 +133,11 @@ namespace PatternFileTypePlugin
                         writer.Write(short.MaxValue);
                     }
 
+                    ReadOnlySpan<byte> channelDataSpan = channelData;
+
                     for (int y = 0; y < height; y++)
                     {
-                        rowCount[y] = (short)RLEHelper.EncodedRow(writer, channelData, y * width, width);
+                        rowCount[y] = (short)RLEHelper.EncodedRow(writer, channelDataSpan.Slice(y * width, width));
                     }
 
                     long current = writer.Position;

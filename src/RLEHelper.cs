@@ -26,7 +26,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
-using System.IO;
+using System;
 
 namespace PatternFileTypePlugin
 {
@@ -36,16 +36,20 @@ namespace PatternFileTypePlugin
 
         private class RlePacketStateMachine
         {
+            private const int maxPacketLength = 128;
+
             private bool rlePacket = false;
             private byte lastValue;
             private int idxPacketData;
             private int packetLength;
             private readonly BigEndianBinaryWriter writer;
-            private byte[] data;
 
-            private const int maxPacketLength = 128;
+            internal RlePacketStateMachine(BigEndianBinaryWriter writer)
+            {
+                this.writer = writer;
+            }
 
-            internal void Flush()
+            internal void Flush(ReadOnlySpan<byte> data)
             {
                 byte header;
                 if (rlePacket)
@@ -58,18 +62,17 @@ namespace PatternFileTypePlugin
                 {
                     header = (byte)(packetLength - 1);
                     writer.Write(header);
-                    writer.Write(data, idxPacketData, packetLength);
+                    writer.Write(data.Slice(idxPacketData, packetLength));
                 }
 
                 packetLength = 0;
             }
 
-            internal void PushRow(byte[] imgData, int startIdx, int endIdx)
+            internal void PushRow(ReadOnlySpan<byte> row)
             {
-                data = imgData;
-                for (int i = startIdx; i < endIdx; i++)
+                for (int i = 0; i < row.Length; i++)
                 {
-                    byte color = imgData[i];
+                    byte color = row[i];
                     if (packetLength == 0)
                     {
                         // Starting a fresh packet.
@@ -88,7 +91,7 @@ namespace PatternFileTypePlugin
                     else if (packetLength == maxPacketLength)
                     {
                         // Packet is full. Start a new one.
-                        Flush();
+                        Flush(row);
                         rlePacket = false;
                         lastValue = color;
                         idxPacketData = i;
@@ -98,7 +101,7 @@ namespace PatternFileTypePlugin
                     {
                         // We were filling in an RLE packet, and we got a non-repeated color.
                         // Emit the current packet and start a new one.
-                        Flush();
+                        Flush(row);
                         rlePacket = false;
                         lastValue = color;
                         idxPacketData = i;
@@ -123,40 +126,35 @@ namespace PatternFileTypePlugin
                         // Emit the current packet without its last color, and start a
                         // new RLE packet that starts with a length of 2.
                         --packetLength;
-                        Flush();
+                        Flush(row);
                         rlePacket = true;
                         packetLength = 2;
                         lastValue = color;
                     }
                 }
 
-                Flush();
-            }
-
-            internal RlePacketStateMachine(BigEndianBinaryWriter writer)
-            {
-                this.writer = writer;
+                Flush(row);
             }
         }
 
         ////////////////////////////////////////////////////////////////////////
 
-        public static int EncodedRow(BigEndianBinaryWriter writer, byte[] imgData, int startIdx, int columns)
+        public static int EncodedRow(BigEndianBinaryWriter writer, ReadOnlySpan<byte> row)
         {
             long startPosition = writer.Position;
 
             RlePacketStateMachine machine = new(writer);
-            machine.PushRow(imgData, startIdx, startIdx + columns);
+            machine.PushRow(row);
 
             return (int)(writer.Position - startPosition);
         }
 
         ////////////////////////////////////////////////////////////////////////
 
-        public static void DecodedRow(BigEndianBinaryReader reader, byte[] imgData, int startIdx, int columns)
+        public static void DecodedRow(BigEndianBinaryReader reader, Span<byte> destination)
         {
             int count = 0;
-            while (count < columns)
+            while (count < destination.Length)
             {
                 byte byteValue = reader.ReadByte();
 
@@ -164,14 +162,10 @@ namespace PatternFileTypePlugin
                 if (len < 128)
                 {
                     len++;
-                    while (len != 0 && (startIdx + count) < imgData.Length)
-                    {
-                        byteValue = reader.ReadByte();
 
-                        imgData[startIdx + count] = byteValue;
-                        count++;
-                        len--;
-                    }
+                    reader.ProperRead(destination.Slice(count, len));
+
+                    count += len;
                 }
                 else if (len > 128)
                 {
@@ -182,12 +176,9 @@ namespace PatternFileTypePlugin
 
                     byteValue = reader.ReadByte();
 
-                    while (len != 0 && (startIdx + count) < imgData.Length)
-                    {
-                        imgData[startIdx + count] = byteValue;
-                        count++;
-                        len--;
-                    }
+                    destination.Slice(count, len).Fill(byteValue);
+
+                    count += len;
                 }
             }
         }

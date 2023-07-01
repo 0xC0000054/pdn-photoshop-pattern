@@ -222,6 +222,18 @@ namespace PatternFileTypePlugin
             stream.Write(bytes, offset, count);
         }
 
+        /// <summary>
+        /// Writes the specified data to the current stream.
+        /// </summary>
+        /// <param name="bytes">The bytes.</param>
+        /// <exception cref="ObjectDisposedException">The object has been disposed.</exception>
+        public void Write(ReadOnlySpan<byte> bytes)
+        {
+            VerifyNotDisposed();
+
+            stream.Write(bytes);
+        }
+
         //////////////////////////////////////////////////////////////////
 
         /// <summary>
