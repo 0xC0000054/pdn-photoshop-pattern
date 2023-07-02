@@ -11,6 +11,7 @@
 
 using PaintDotNet;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 
@@ -24,18 +25,22 @@ namespace PatternFileTypePlugin
 
             using (BigEndianBinaryWriter writer = new(output, true))
             {
+                List<(int index, Rectangle saveBounds)> nonEmptyLayers = GetNonEmptyLayers(input);
+
                 writer.Write(PatternConstants.FileSignature);
                 writer.Write(PatternConstants.FileVersion);
-                writer.Write(input.Layers.Count);
+                writer.Write(nonEmptyLayers.Count);
 
                 double progressPercentage = 0.0;
-                double progressDelta = (1.0 / input.Layers.Count) * 100.0;
+                double progressDelta = (1.0 / nonEmptyLayers.Count) * 100.0;
 
-                foreach (Layer item in input.Layers)
+                LayerList layers = input.Layers;
+
+                foreach ((int index, Rectangle visibleBounds) in nonEmptyLayers)
                 {
-                    BitmapLayer layer = (BitmapLayer)item;
+                    BitmapLayer layer = (BitmapLayer)layers[index];
 
-                    SaveLayer(writer, layer, rle);
+                    SaveLayer(writer, layer, visibleBounds, rle);
 
                     progressPercentage += progressDelta;
                     progressCallback?.Invoke(null, new ProgressEventArgs(progressPercentage));
@@ -43,10 +48,77 @@ namespace PatternFileTypePlugin
             }
         }
 
-        private static void SaveLayer(BigEndianBinaryWriter writer, BitmapLayer layer, bool rle)
+        private static List<(int index, Rectangle saveBounds)> GetNonEmptyLayers(Document input)
+        {
+            LayerList layers = input.Layers;
+
+            // Assume that the document does not contain any empty layers.
+            List<(int, Rectangle)> nonEmptyLayers = new(layers.Count);
+
+            for (int i = 0; i < layers.Count; i++)
+            {
+                BitmapLayer layer = (BitmapLayer)layers[i];
+
+                Rectangle saveBounds = GetVisibleBounds(layer.Surface);
+
+                if (!saveBounds.IsEmpty)
+                {
+                    nonEmptyLayers.Add((i, saveBounds));
+                }
+            }
+
+            return nonEmptyLayers;
+
+            static unsafe Rectangle GetVisibleBounds(Surface surface)
+            {
+                int left = surface.Width;
+                int top = surface.Height;
+                int right = 0;
+                int bottom = 0;
+
+                for (int y = 0; y < surface.Height; y++)
+                {
+                    ColorBgra* p = surface.GetRowPointerUnchecked(y);
+
+                    for (int x = 0; x < surface.Width; x++)
+                    {
+                        if (p->A > 0)
+                        {
+                            if (x < left)
+                            {
+                                left = x;
+                            }
+                            if (x > right)
+                            {
+                                right = x;
+                            }
+                            if (y < top)
+                            {
+                                top = y;
+                            }
+                            if (y > bottom)
+                            {
+                                bottom = y;
+                            }
+                        }
+                        p++;
+                    }
+                }
+
+                if (left < surface.Width && top < surface.Height)
+                {
+                    return new Rectangle(left, top, right + 1, bottom + 1);
+                }
+                else
+                {
+                    return Rectangle.Empty;
+                }
+            }
+        }
+
+        private static void SaveLayer(BigEndianBinaryWriter writer, BitmapLayer layer, Rectangle visibleBounds, bool rle)
         {
             Surface surface = layer.Surface;
-            Rectangle visibleBounds = GetVisibleBounds(surface);
 
             Analyze(surface, visibleBounds, out bool hasAlpha, out bool grayScale);
 
@@ -86,52 +158,6 @@ namespace PatternFileTypePlugin
                 {
                     WriteRGBPattern(writer, surface, visibleBounds, hasAlpha, rle);
                 }
-            }
-        }
-
-        private static unsafe Rectangle GetVisibleBounds(Surface surface)
-        {
-            int left = surface.Width;
-            int top = surface.Height;
-            int right = 0;
-            int bottom = 0;
-
-            for (int y = 0; y < surface.Height; y++)
-            {
-                ColorBgra* p = surface.GetRowPointerUnchecked(y);
-
-                for (int x = 0; x < surface.Width; x++)
-                {
-                    if (p->A > 0)
-                    {
-                        if (x < left)
-                        {
-                            left = x;
-                        }
-                        if (x > right)
-                        {
-                            right = x;
-                        }
-                        if (y < top)
-                        {
-                            top = y;
-                        }
-                        if (y > bottom)
-                        {
-                            bottom = y;
-                        }
-                    }
-                    p++;
-                }
-            }
-
-            if (left < surface.Width && top < surface.Height)
-            {
-                return new Rectangle(left, top, right + 1, bottom + 1);
-            }
-            else
-            {
-                return Rectangle.Empty;
             }
         }
 
