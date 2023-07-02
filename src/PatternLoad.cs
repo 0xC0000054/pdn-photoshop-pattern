@@ -186,14 +186,18 @@ namespace PatternFileTypePlugin
                     {
                         for (int j = 0; j < 3; j++)
                         {
-                            PatternChannel channel = new(reader);
-                            SetRgbImagePlane(surface, channel, j);
+                            using (PatternChannel channel = new(reader))
+                            {
+                                SetRgbImagePlane(surface, channel, j);
+                            }
                         }
                     }
                     else if (imageMode == ImageType.Grayscale)
                     {
-                        PatternChannel channel = new(reader);
-                        SetGrayscaleImageData(surface, channel);
+                        using (PatternChannel channel = new(reader))
+                        {
+                            SetGrayscaleImageData(surface, channel);
+                        }
                     }
                     else if (imageMode == ImageType.Indexed)
                     {
@@ -285,7 +289,7 @@ namespace PatternFileTypePlugin
 
         private static unsafe void SetAlphaChannel(Surface surface, PatternChannel channel)
         {
-            byte[] pixels = channel.GetChannelData();
+            Span<byte> pixels = channel.GetChannelData();
 
             fixed (byte* ptr = pixels)
             {
@@ -311,7 +315,7 @@ namespace PatternFileTypePlugin
                 }
                 else
                 {
-                    RegionPtr<byte> source = new(pixels, ptr, surface.Width, surface.Height, surface.Width);
+                    RegionPtr<byte> source = new(ptr, surface.Width, surface.Height, surface.Width);
                     RegionPtr<ColorBgra32> target = new(surface,
                                                         (ColorBgra32*)surface.Scan0.VoidStar,
                                                         surface.Width,
@@ -325,7 +329,7 @@ namespace PatternFileTypePlugin
 
         private static unsafe void SetGrayscaleImageData(Surface surface, PatternChannel channel)
         {
-            byte[] pixels = channel.GetChannelData();
+            Span<byte> pixels = channel.GetChannelData();
 
             fixed (byte* ptr = pixels)
             {
@@ -373,7 +377,7 @@ namespace PatternFileTypePlugin
 
         private static unsafe void SetIndexedImageData(Surface surface, PatternChannel channel, byte[] indexedColorTable)
         {
-            byte[] pixels = channel.GetChannelData();
+            Span<byte> pixels = channel.GetChannelData();
 
             fixed (byte* ptr = pixels)
             {
@@ -402,7 +406,7 @@ namespace PatternFileTypePlugin
 
         private static unsafe void SetRgbImagePlane(Surface surface, PatternChannel channel, int rgbChannelIndex)
         {
-            byte[] pixels = channel.GetChannelData();
+            Span<byte> pixels = channel.GetChannelData();
 
             fixed (byte* ptr = pixels)
             {
@@ -447,7 +451,7 @@ namespace PatternFileTypePlugin
                         2 => 0,
                         _ => rgbChannelIndex,
                     };
-                    RegionPtr<byte> source = new(pixels, ptr, surface.Width, surface.Height, surface.Width);
+                    RegionPtr<byte> source = new(ptr, surface.Width, surface.Height, surface.Width);
                     RegionPtr<ColorBgra32> target = new(surface,
                                                         (ColorBgra32*)surface.Scan0.VoidStar,
                                                         surface.Width,

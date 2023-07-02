@@ -10,6 +10,8 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 using PaintDotNet;
+using PaintDotNet.Imaging;
+using PaintDotNet.Rendering;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -190,95 +192,80 @@ namespace PatternFileTypePlugin
             }
         }
 
+        private static unsafe void ExtractChannelData(Surface source, Span<byte> destination, int bgraChannelIndex)
+        {
+            fixed (byte* ptr = destination)
+            {
+                int width = source.Width;
+                int height = source.Height;
+
+                RegionPtr<byte> target = new(ptr, width, height, width);
+                RegionPtr<ColorBgra32> sourceRegion = new(source,
+                                                          (ColorBgra32*)source.Scan0.VoidStar,
+                                                          width,
+                                                          height,
+                                                          source.Stride);
+
+                PixelKernels.ExtractChannel(target, sourceRegion, bgraChannelIndex);
+            }
+        }
+
         private static unsafe void WriteRGBPattern(BigEndianBinaryWriter writer, Surface surface, Rectangle visibleBounds, bool hasAlpha, bool rle)
         {
-            int size = visibleBounds.Width * visibleBounds.Height;
-
-            byte[] red = new byte[size];
-            byte[] green = new byte[size];
-            byte[] blue = new byte[size];
-            byte[] alpha = hasAlpha ? new byte[size] : null;
-
-            int index = 0;
-            for (int y = visibleBounds.Top; y < visibleBounds.Bottom; y++)
-            {
-                ColorBgra* p = surface.GetPointPointerUnchecked(visibleBounds.Left, y);
-
-                for (int x = visibleBounds.Left; x < visibleBounds.Right; x++)
-                {
-                    red[index] = p->R;
-                    green[index] = p->G;
-                    blue[index] = p->B;
-
-                    if (hasAlpha)
-                    {
-                        alpha[index] = p->A;
-                    }
-
-                    p++;
-                    index++;
-                }
-            }
-
             PatternImageCompression compression = rle ? PatternImageCompression.RLE : PatternImageCompression.Raw;
 
-            WriteChannelData(writer, visibleBounds, compression, red);
-            WriteChannelData(writer, visibleBounds, compression, green);
-            WriteChannelData(writer, visibleBounds, compression, blue);
+            using (PatternChannel red = new(visibleBounds, compression))
+            {
+                ExtractChannelData(surface, red.GetChannelData(), 2);
+                red.Write(writer);
+            }
+
+            using (PatternChannel green = new(visibleBounds, compression))
+            {
+                ExtractChannelData(surface, green.GetChannelData(), 1);
+                green.Write(writer);
+            }
+
+            using (PatternChannel blue = new(visibleBounds, compression))
+            {
+                ExtractChannelData(surface, blue.GetChannelData(), 0);
+                blue.Write(writer);
+            }
 
             if (hasAlpha)
             {
                 // Write the padding that comes before the channel header.
                 writer.Write(new byte[PatternConstants.AlphaChannelPadding.RGBModeSize]);
 
-                WriteChannelData(writer, visibleBounds, compression, alpha);
+                using (PatternChannel alpha = new(visibleBounds, compression))
+                {
+                    ExtractChannelData(surface, alpha.GetChannelData(), 3);
+                    alpha.Write(writer);
+                }
             }
         }
 
         private static unsafe void WriteGrayscalePattern(BigEndianBinaryWriter writer, Surface surface, Rectangle visibleBounds, bool hasAlpha, bool rle)
         {
-            int size = visibleBounds.Width * visibleBounds.Height;
-
-            byte[] gray = new byte[size];
-            byte[] alpha = hasAlpha ? new byte[size] : null;
-
-            int index = 0;
-            for (int y = visibleBounds.Top; y < visibleBounds.Bottom; y++)
-            {
-                ColorBgra* p = surface.GetPointPointerUnchecked(visibleBounds.Left, y);
-
-                for (int x = visibleBounds.Left; x < visibleBounds.Right; x++)
-                {
-                    gray[index] = p->R;
-
-                    if (hasAlpha)
-                    {
-                        alpha[index] = p->A;
-                    }
-
-                    p++;
-                    index++;
-                }
-            }
-
             PatternImageCompression compression = rle ? PatternImageCompression.RLE : PatternImageCompression.Raw;
 
-            WriteChannelData(writer, visibleBounds, compression, gray);
+            using (PatternChannel gray = new(visibleBounds, compression))
+            {
+                ExtractChannelData(surface, gray.GetChannelData(), 0);
+                gray.Write(writer);
+            }
 
             if (hasAlpha)
             {
                 // Write the padding that comes before the channel header.
                 writer.Write(new byte[PatternConstants.AlphaChannelPadding.GrayscaleModeSize]);
 
-                WriteChannelData(writer, visibleBounds, compression, alpha);
+                using (PatternChannel alpha = new(visibleBounds, compression))
+                {
+                    ExtractChannelData(surface, alpha.GetChannelData(), 3);
+                    alpha.Write(writer);
+                }
             }
-        }
-
-        private static unsafe void WriteChannelData(BigEndianBinaryWriter writer, Rectangle visibleBounds, PatternImageCompression compression, byte[] channelData)
-        {
-            const ushort ChannelDepth = 8;
-
-            new PatternChannel(ChannelDepth, visibleBounds, compression, channelData).WriteChannelData(writer);
         }
     }
 }

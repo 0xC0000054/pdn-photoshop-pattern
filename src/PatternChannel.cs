@@ -9,12 +9,13 @@
 //
 /////////////////////////////////////////////////////////////////////////////////
 
+using CommunityToolkit.HighPerformance.Buffers;
 using System;
 using System.Drawing;
 
 namespace PatternFileTypePlugin
 {
-    internal sealed class PatternChannel
+    internal sealed class PatternChannel : IDisposable
     {
 #pragma warning disable IDE0032 // Use auto property
         private readonly bool enabled;
@@ -23,7 +24,7 @@ namespace PatternFileTypePlugin
         private readonly Rectangle bounds;
         private readonly ushort depth16;
         private readonly PatternImageCompression compression;
-        private byte[] channelData;
+        private MemoryOwner<byte> channelData;
 #pragma warning restore IDE0032 // Use auto property
 
         public PatternChannel(BigEndianBinaryReader reader)
@@ -48,48 +49,43 @@ namespace PatternFileTypePlugin
                 channelDataStride *= 2;
             }
 
-            channelData = new byte[channelDataStride * height];
+            channelData = MemoryOwner<byte>.Allocate(channelDataStride * height);
 
-            if (compression == PatternImageCompression.RLE)
+            try
             {
-                // Skip the row byte counts
-                reader.Position += (long)height * sizeof(short);
+                Span<byte> channelDataSpan = channelData.Span;
 
-                Span<byte> channelDataSpan = channelData;
-
-                for (int y = 0; y < height; y++)
+                if (compression == PatternImageCompression.RLE)
                 {
-                    RLEHelper.DecodedRow(reader, channelDataSpan.Slice(y * channelDataStride, channelDataStride));
+                    // Skip the row byte counts
+                    reader.Position += (long)height * sizeof(short);
+
+                    for (int y = 0; y < height; y++)
+                    {
+                        RLEHelper.DecodedRow(reader, channelDataSpan.Slice(y * channelDataStride, channelDataStride));
+                    }
+                }
+                else
+                {
+                    reader.ProperRead(channelDataSpan);
                 }
             }
-            else
+            catch (Exception)
             {
-                int numBytesToRead = channelData.Length;
-                int numBytesRead = 0;
-                while (numBytesToRead > 0)
-                {
-                    // Read may return anything from 0 to numBytesToRead.
-                    int n = reader.Read(channelData, numBytesRead, numBytesToRead);
-                    // The end of the file is reached.
-                    if (n == 0)
-                    {
-                        break;
-                    }
-                    numBytesRead += n;
-                    numBytesToRead -= n;
-                }
+                channelData.Dispose();
+                throw;
             }
         }
 
-        public PatternChannel(ushort depth, Rectangle bounds, PatternImageCompression compression, byte[] data)
+        public PatternChannel(Rectangle bounds, PatternImageCompression compression)
         {
             enabled = true;
-            size = 0; // Placeholder for the size written in WriteChannelData.
-            depth32 = depth;
+            size = 0; // Placeholder for the size written in Write.
+            depth32 = 8;
             this.bounds = bounds;
-            depth16 = depth;
+            depth16 = 8;
             this.compression = compression;
-            channelData = data;
+            channelData = MemoryOwner<byte>.Allocate(bounds.Width * bounds.Height);
         }
 
         public bool Enabled => enabled;
@@ -100,12 +96,23 @@ namespace PatternFileTypePlugin
 
         public ushort Depth => depth16;
 
-        public byte[] GetChannelData()
+        public int Stride { get; }
+
+        public void Dispose()
         {
-            return channelData;
+            if (channelData != null)
+            {
+                channelData.Dispose();
+                channelData = null;
+            }
         }
 
-        public void WriteChannelData(BigEndianBinaryWriter writer)
+        public Span<byte> GetChannelData()
+        {
+            return channelData.Span;
+        }
+
+        public void Write(BigEndianBinaryWriter writer)
         {
             writer.Write(enabled ? 1U : 0U);
 
@@ -115,6 +122,8 @@ namespace PatternFileTypePlugin
                 writer.WriteInt32Rectangle(bounds);
                 writer.Write(depth16);
                 writer.Write((byte)compression);
+
+                ReadOnlySpan<byte> channelDataSpan = channelData.Span;
 
                 if (compression == PatternImageCompression.RLE)
                 {
@@ -129,8 +138,6 @@ namespace PatternFileTypePlugin
                         // Placeholder for the row byte length.
                         writer.Write(short.MaxValue);
                     }
-
-                    ReadOnlySpan<byte> channelDataSpan = channelData;
 
                     for (int y = 0; y < height; y++)
                     {
@@ -149,7 +156,7 @@ namespace PatternFileTypePlugin
                 }
                 else
                 {
-                    writer.Write(channelData);
+                    writer.Write(channelDataSpan);
                 }
             }
         }
