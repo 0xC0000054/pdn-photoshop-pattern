@@ -10,12 +10,17 @@
 /////////////////////////////////////////////////////////////////////////////////
 
 using PaintDotNet;
+using PaintDotNet.Imaging;
+using PaintDotNet.Rendering;
 using PatternFileTypePlugin.Properties;
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace PatternFileTypePlugin
 {
@@ -130,28 +135,14 @@ namespace PatternFileTypePlugin
 
                 string tag = reader.ReadPascalString();
 
-                int channelCount = 0;
                 byte[] indexedColorTable = null;
 
                 if (imageMode == ImageType.Indexed)
                 {
-                    channelCount = 1;
                     indexedColorTable = reader.ReadBytes(768);
 
                     // Skip the 2 unknown UInt16 values, colors used and colors important?
                     reader.Position += 4L;
-                }
-                else if (imageMode == ImageType.RGB)
-                {
-                    channelCount = 3;
-                }
-                else if (imageMode == ImageType.Grayscale)
-                {
-                    channelCount = 1;
-                }
-                else
-                {
-                    throw new FormatException(string.Format(CultureInfo.CurrentCulture, Resources.UnsupportedImageTypeFormat, imageMode));
                 }
 
                 uint subVersion = reader.ReadUInt32();
@@ -162,8 +153,9 @@ namespace PatternFileTypePlugin
 
                 uint patternSize = reader.ReadUInt32();
 
-                if (channelCount == 0)
+                if (imageMode != ImageType.Grayscale && imageMode != ImageType.Indexed && imageMode != ImageType.RGB)
                 {
+                    // Skip the unsupported image mode.
                     reader.Position += patternSize;
                 }
 
@@ -188,21 +180,45 @@ namespace PatternFileTypePlugin
 
                     uint unknown = reader.ReadUInt32();
 
-                    byte[] pixels = new byte[bounds.Width * bounds.Height * channelCount];
+                    Surface surface = new(bounds.Width, bounds.Height);
 
-                    for (int j = 0; j < channelCount; j++)
+                    if (imageMode == ImageType.RGB)
+                    {
+                        for (int j = 0; j < 3; j++)
+                        {
+                            PatternChannel channel = new(reader);
+                            SetRgbImagePlane(surface, channel, j);
+                        }
+                    }
+                    else if (imageMode == ImageType.Grayscale)
                     {
                         PatternChannel channel = new(reader);
-                        DecodeChannelData(channel, pixels, j, channelCount);
+                        SetGrayscaleImageData(surface, channel);
                     }
-
-                    byte[] alpha = null;
+                    else if (imageMode == ImageType.Indexed)
+                    {
+                        PatternChannel channel = new(reader);
+                        SetIndexedImageData(surface, channel, indexedColorTable);
+                    }
+                    else
+                    {
+                        throw new FormatException(string.Format(CultureInfo.CurrentCulture, Resources.UnsupportedImageTypeFormat, imageMode));
+                    }
 
                     PatternChannel alphaChannel = GetAlphaChannel(reader, imageMode, nextPatternOffset);
                     if (alphaChannel != null)
                     {
-                        alpha = new byte[bounds.Width * bounds.Height];
-                        DecodeChannelData(alphaChannel, alpha, 0, 1);
+                        SetAlphaChannel(surface, alphaChannel);
+                    }
+                    else
+                    {
+                        RegionPtr<ColorBgra32> region = new(surface,
+                                                            (ColorBgra32*)surface.Scan0.VoidStar,
+                                                            surface.Width,
+                                                            surface.Height,
+                                                            surface.Stride);
+
+                        PixelKernels.SetAlphaChannel(region, ColorAlpha8.Opaque);
                     }
 
                     long remainder = nextPatternOffset - reader.Position;
@@ -212,7 +228,7 @@ namespace PatternFileTypePlugin
                         reader.Position += remainder;
                     }
 
-                    patterns.Add(new PatternData(name, RenderPattern(bounds.Width, bounds.Height, channelCount, imageMode, pixels, indexedColorTable, alpha)));
+                    patterns.Add(new PatternData(name, surface));
 
 #if DEBUG
                     using (Bitmap bmp = patterns[i].pattern.CreateAliasedBitmap())
@@ -267,156 +283,180 @@ namespace PatternFileTypePlugin
             return alphaChannel;
         }
 
-        private static unsafe void DecodeChannelData(PatternChannel channel, byte[] buffer, int offset, int channelCount)
+        private static unsafe void SetAlphaChannel(Surface surface, PatternChannel channel)
         {
-            int width = channel.Bounds.Width;
-            int height = channel.Bounds.Height;
-            byte[] channelData = channel.GetChannelData();
+            byte[] pixels = channel.GetChannelData();
 
-            fixed (byte* srcPtr = channelData, buf = buffer)
+            fixed (byte* ptr = pixels)
             {
-                int srcStride = width;
-                byte* dstPtr = buf + offset;
-                int dstStride = width * channelCount;
                 if (channel.Depth == 16)
                 {
-                    srcStride *= 2;
+                    int width = surface.Width;
+                    int height = surface.Height;
+                    int srcStride = width * 2;
 
                     for (int y = 0; y < height; y++)
                     {
-                        byte* src = srcPtr + (y * srcStride);
-                        byte* dst = dstPtr + (y * dstStride);
+                        byte* src = ptr + (y * srcStride);
+                        ColorBgra* dst = surface.GetRowPointerUnchecked(y);
 
                         for (int x = 0; x < width; x++)
                         {
-                            // The 16-bit values are stored as big endian in the range of [0, 32768].
-                            ushort val = (ushort)((src[0] << 8) | src[1]);
-                            *dst = (byte)((val * 10) / 1285);
+                            dst->A = SixteenBitConversion.GetEightBitValue(src);
 
                             src += 2;
-                            dst += channelCount;
+                            dst++;
                         }
                     }
                 }
                 else
                 {
+                    RegionPtr<byte> source = new(pixels, ptr, surface.Width, surface.Height, surface.Width);
+                    RegionPtr<ColorBgra32> target = new(surface,
+                                                        (ColorBgra32*)surface.Scan0.VoidStar,
+                                                        surface.Width,
+                                                        surface.Height,
+                                                        surface.Stride);
+
+                    PixelKernels.ReplaceChannel(target, source, 3);
+                }
+            }
+        }
+
+        private static unsafe void SetGrayscaleImageData(Surface surface, PatternChannel channel)
+        {
+            byte[] pixels = channel.GetChannelData();
+
+            fixed (byte* ptr = pixels)
+            {
+                int width = surface.Width;
+                int height = surface.Height;
+
+                if (channel.Depth == 16)
+                {
+                    int srcStride = width * 2;
+
                     for (int y = 0; y < height; y++)
                     {
-                        byte* src = srcPtr + (y * srcStride);
-                        byte* dst = dstPtr + (y * dstStride);
+                        byte* src = ptr + (y * srcStride);
+                        ColorBgra* dst = surface.GetRowPointerUnchecked(y);
 
                         for (int x = 0; x < width; x++)
                         {
-                            *dst = *src;
+                            dst->R = dst->G = dst->B = SixteenBitConversion.GetEightBitValue(src);
+
+                            src += 2;
+                            dst++;
+                        }
+                    }
+                }
+                else
+                {
+                    int srcStride = width;
+
+                    for (int y = 0; y < height; y++)
+                    {
+                        byte* src = ptr + (y * srcStride);
+                        ColorBgra* dst = surface.GetRowPointerUnchecked(y);
+
+                        for (int x = 0; x < width; x++)
+                        {
+                            dst->R = dst->G = dst->B = *src;
 
                             src++;
-                            dst += channelCount;
+                            dst++;
                         }
                     }
                 }
             }
         }
 
-        private static unsafe Surface RenderPattern(int width, int height, int channelCount, ImageType imageMode, byte[] pixels, byte[] indexedColorTable, byte[] alpha)
+        private static unsafe void SetIndexedImageData(Surface surface, PatternChannel channel, byte[] indexedColorTable)
         {
-            Surface surface = null;
-            Surface temp = null;
+            byte[] pixels = channel.GetChannelData();
 
-            try
+            fixed (byte* ptr = pixels)
             {
-                temp = new Surface(width, height);
+                int width = surface.Width;
+                int height = surface.Height;
+                int srcStride = width;
 
-                fixed (byte* ptr = pixels)
+                for (int y = 0; y < height; y++)
                 {
-                    int srcStride = width * channelCount;
+                    byte* src = ptr + (y * srcStride);
+                    ColorBgra* dst = surface.GetRowPointerUnchecked(y);
 
-                    if (alpha == null)
+                    for (int x = 0; x < width; x++)
                     {
-                        new UnaryPixelOps.SetAlphaChannelTo255().Apply(temp, temp.Bounds);
+                        int index = src[0] * 3;
+                        dst->R = indexedColorTable[index];
+                        dst->G = indexedColorTable[index + 1];
+                        dst->B = indexedColorTable[index + 2];
 
-                        for (int y = 0; y < height; y++)
-                        {
-                            byte* src = ptr + (y * srcStride);
-                            ColorBgra* dst = temp.GetRowPointerUnchecked(y);
-
-                            for (int x = 0; x < width; x++)
-                            {
-                                switch (imageMode)
-                                {
-                                    case ImageType.Grayscale:
-                                        dst->R = dst->G = dst->B = *src;
-                                        break;
-                                    case ImageType.Indexed:
-                                        int index = src[0] * 3;
-                                        dst->R = indexedColorTable[index];
-                                        dst->G = indexedColorTable[index + 1];
-                                        dst->B = indexedColorTable[index + 2];
-                                        break;
-                                    case ImageType.RGB:
-                                        dst->R = src[0];
-                                        dst->G = src[1];
-                                        dst->B = src[2];
-                                        break;
-                                }
-
-                                src += channelCount;
-                                dst++;
-                            }
-                        }
+                        src++;
+                        dst++;
                     }
-                    else
+                }
+            }
+        }
+
+        private static unsafe void SetRgbImagePlane(Surface surface, PatternChannel channel, int rgbChannelIndex)
+        {
+            byte[] pixels = channel.GetChannelData();
+
+            fixed (byte* ptr = pixels)
+            {
+                if (channel.Depth == 16)
+                {
+                    int width = surface.Width;
+                    int height = surface.Height;
+                    int srcStride = width * 2;
+
+                    for (int y = 0; y < height; y++)
                     {
-                        fixed (byte* alPtr = alpha)
+                        byte* src = ptr + (y * srcStride);
+                        ColorBgra* dst = surface.GetRowPointerUnchecked(y);
+
+                        for (int x = 0; x < width; x++)
                         {
-                            for (int y = 0; y < height; y++)
+                            byte value = SixteenBitConversion.GetEightBitValue(src);
+
+                            switch (rgbChannelIndex)
                             {
-                                byte* src = ptr + (y * srcStride);
-                                byte* al = alPtr + (y * width);
-                                ColorBgra* dst = temp.GetRowPointerUnchecked(y);
-
-                                for (int x = 0; x < width; x++)
-                                {
-                                    switch (imageMode)
-                                    {
-                                        case ImageType.Grayscale:
-                                            dst->R = dst->G = dst->B = *src;
-                                            break;
-                                        case ImageType.Indexed:
-                                            int index = src[0] * 3;
-                                            dst->R = indexedColorTable[index];
-                                            dst->G = indexedColorTable[index + 1];
-                                            dst->B = indexedColorTable[index + 2];
-                                            break;
-                                        case ImageType.RGB:
-                                            dst->R = src[0];
-                                            dst->G = src[1];
-                                            dst->B = src[2];
-                                            break;
-                                    }
-                                    dst->A = *al;
-
-                                    src += channelCount;
-                                    al++;
-                                    dst++;
-                                }
+                                case 0:
+                                    dst->R = value;
+                                    break;
+                                case 1:
+                                    dst->G = value;
+                                    break;
+                                case 2:
+                                    dst->B = value;
+                                    break;
                             }
+
+                            src += 2;
+                            dst++;
                         }
                     }
                 }
-
-                surface = temp;
-                temp = null;
-            }
-            finally
-            {
-                if (temp != null)
+                else
                 {
-                    temp.Dispose();
-                    temp = null;
+                    var bgrChannelIndex = rgbChannelIndex switch
+                    {
+                        0 => 2,
+                        2 => 0,
+                        _ => rgbChannelIndex,
+                    };
+                    RegionPtr<byte> source = new(pixels, ptr, surface.Width, surface.Height, surface.Width);
+                    RegionPtr<ColorBgra32> target = new(surface,
+                                                        (ColorBgra32*)surface.Scan0.VoidStar,
+                                                        surface.Width,
+                                                        surface.Height,
+                                                        surface.Stride);
+
+                    PixelKernels.ReplaceChannel(target, source, bgrChannelIndex);
                 }
             }
-
-            return surface;
         }
 
         private sealed class PatternData : IDisposable
@@ -437,6 +477,39 @@ namespace PatternFileTypePlugin
                     pattern.Dispose();
                     pattern = null;
                 }
+            }
+        }
+
+        private static class SixteenBitConversion
+        {
+            private static readonly ImmutableArray<byte> EightBitLookupTable = CreateEightBitLookupTable();
+
+            public static unsafe byte GetEightBitValue(byte* data)
+            {
+                // The 16-bit brush data is stored as a big-endian integer in the range of [0, 32768].
+                ushort value = Unsafe.ReadUnaligned<ushort>(data);
+
+                if (BitConverter.IsLittleEndian)
+                {
+                    value = BinaryPrimitives.ReverseEndianness(value);
+                }
+
+                // Because an unsigned value can never be negative we only need to clamp
+                // to the upper bound of the lookup table.
+                return EightBitLookupTable[Math.Min((int)value, 32768)];
+            }
+
+            private static ImmutableArray<byte> CreateEightBitLookupTable()
+            {
+                ImmutableArray<byte>.Builder builder = ImmutableArray.CreateBuilder<byte>(32769);
+
+                for (int i = 0; i < builder.Capacity; i++)
+                {
+                    // The 16-bit brush data is stored in the range of [0, 32768].
+                    builder.Add((byte)((i * 10) / 1285));
+                }
+
+                return builder.MoveToImmutable();
             }
         }
     }
