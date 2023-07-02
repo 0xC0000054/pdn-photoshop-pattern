@@ -132,27 +132,31 @@ namespace PatternFileTypePlugin
 
                     long rowCountPosition = writer.Position;
 
-                    short[] rowCount = new short[height];
                     for (int i = 0; i < height; i++)
                     {
                         // Placeholder for the row byte length.
                         writer.Write(short.MaxValue);
                     }
 
-                    for (int y = 0; y < height; y++)
+                    using (SpanOwner<short> rowCountOwner = SpanOwner<short>.Allocate(height))
                     {
-                        rowCount[y] = (short)RLEHelper.EncodedRow(writer, channelDataSpan.Slice(y * width, width));
+                        Span<short> rowCount = rowCountOwner.Span;
+
+                        for (int y = 0; y < height; y++)
+                        {
+                            rowCount[y] = (short)RLEHelper.EncodedRow(writer, channelDataSpan.Slice(y * width, width));
+                        }
+
+                        long current = writer.Position;
+
+                        writer.Position = rowCountPosition;
+                        for (int i = 0; i < height; i++)
+                        {
+                            writer.Write(rowCount[i]);
+                        }
+
+                        writer.Position = current;
                     }
-
-                    long current = writer.Position;
-
-                    writer.Position = rowCountPosition;
-                    for (int i = 0; i < height; i++)
-                    {
-                        writer.Write(rowCount[i]);
-                    }
-
-                    writer.Position = current;
                 }
                 else
                 {
