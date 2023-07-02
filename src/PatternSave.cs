@@ -21,6 +21,11 @@ namespace PatternFileTypePlugin
     {
         public static unsafe void Save(Document input, Stream output, PropertyBasedSaveConfigToken token, ProgressEventHandler progressCallback)
         {
+            if (input.Width > ushort.MaxValue || input.Height > ushort.MaxValue)
+            {
+                throw new FormatException($"The document dimensions must be 65535x65535 or less.");
+            }
+
             bool rle = token.GetProperty<PaintDotNet.PropertySystem.BooleanProperty>(PropertyNames.RLE).Value;
 
             using (BigEndianBinaryWriter writer = new(output, true))
